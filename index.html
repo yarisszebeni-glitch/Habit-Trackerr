@@ -182,11 +182,12 @@ th{background:#f7f7f7}
 
 <!-- ===== WOCHE ===== -->
 <div id="weekView">
-  <div class="weekNav">
-    <button onclick="changeWeek(-1)">← Woche</button>
-    <button onclick="currentWeekOffset=0;renderWeek()">Aktuelle Woche</button>
-    <button onclick="changeWeek(1)">Woche →</button>
-  </div>
+ <div class="weekNav">
+  <button onclick="changeWeek(-1)">← Woche</button>
+  <button onclick="currentWeekOffset=0;renderWeek();renderSleepStats()">Aktuelle Woche</button>
+  <button onclick="changeWeek(1)">Woche →</button>
+</div>
+
   <div class="weekCards" id="weekCards"></div>
 </div>
 <!-- ===== STATISTIK ===== -->
@@ -459,7 +460,14 @@ for(let h in data.habits){
     weekCards.appendChild(card);
   }
 }
-window.changeWeek=(d)=>{currentWeekOffset+=d;renderWeek();};
+window.changeWeek=(d)=>{
+  currentWeekOffset+=d;
+  renderWeek();
+  if(typeof renderSleepStats==="function"){
+    renderSleepStats();
+  }
+};
+
   window.editSleep=(y,m,d)=>{
   let val=prompt("Wie viele Stunden hast du geschlafen? (z. B. 7.5)");
   if(val===null) return;
@@ -529,6 +537,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
