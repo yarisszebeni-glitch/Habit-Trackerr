@@ -353,6 +353,10 @@ let sleepVal=data.sleep[y][m][i];
     
 
     let habits=data.logs[y][m];
+for(let h in data.habits){
+  habits[h] ??= Array(daysInMonth(y,m)).fill(false);
+}
+
     let names=Object.keys(data.habits);
     let done=0;
     names.forEach(h=>{if(habits[h]?.[i])done++;});
@@ -425,6 +429,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
