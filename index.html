@@ -21,7 +21,11 @@ th{background:#f7f7f7}
 
 .progress{height:8px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:4px}
 .progress div{height:100%;background:#6fa85c}
+
+#userStatus{margin-bottom:10px;font-weight:bold}
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -29,10 +33,11 @@ th{background:#f7f7f7}
 
 <h2>Habit Tracker</h2>
 
+<div id="userStatus">Nicht eingeloggt</div>
 <button onclick="login()">Login</button>
 <button onclick="logout()">Logout</button>
 
-<br><br>
+<hr>
 
 <b>Jahr:</b>
 <select id="yearSelect"></select>
@@ -46,6 +51,8 @@ th{background:#f7f7f7}
 
 <br><br>
 <table id="table"></table>
+
+<canvas id="monthChart" style="margin-top:30px"></canvas>
 
 </div>
 
@@ -72,16 +79,13 @@ const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 /* ================= LOGIN ================= */
-window.login = async () => await signInWithPopup(auth, provider);
-window.logout = async () => await signOut(auth);
+window.login = async ()=> await signInWithPopup(auth, provider);
+window.logout = async ()=> await signOut(auth);
 
 /* ================= DATEN ================= */
-window.data = {
-  habits:{},
-  logs:{}
-};
+window.data = { habits:{}, logs:{} };
 
-/* ================= CLOUD SAVE ================= */
+/* ================= SAVE ================= */
 window.save = async function(){
   if(!auth.currentUser) return;
   await setDoc(doc(db,"users",auth.currentUser.uid), data);
@@ -89,11 +93,17 @@ window.save = async function(){
 
 /* ================= LOAD ================= */
 onAuthStateChanged(auth, async user=>{
-  if(!user) return;
+  if(!user){
+    userStatus.textContent="Nicht eingeloggt";
+    return;
+  }
+  userStatus.textContent="Eingeloggt als: "+user.email;
   const snap = await getDoc(doc(db,"users",user.uid));
   if(snap.exists()){
     data = snap.data();
     render();
+  } else {
+    save();
   }
 });
 
@@ -103,6 +113,7 @@ const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','
 
 let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
+let chart;
 
 /* ================= INIT ================= */
 for(let y=currentYear-3;y<=currentYear+3;y++){
@@ -146,7 +157,7 @@ window.deleteHabit=function(name){
 
 window.toggle=function(h,i){
   data.logs[currentYear][currentMonth][h][i]=
-  !data.logs[currentYear][currentMonth][h][i];
+    !data.logs[currentYear][currentMonth][h][i];
   save();render();
 };
 
@@ -168,8 +179,10 @@ function render(){
   header+="</tr>";
   table.innerHTML+=header;
 
-  for(let h in data.logs[currentYear][currentMonth]){
-    let done=data.logs[currentYear][currentMonth][h].filter(v=>v).length;
+  const habits=data.logs[currentYear][currentMonth];
+
+  for(let h in habits){
+    let done=habits[h].filter(v=>v).length;
     let goal=data.habits[h];
     let p=Math.round(done/goal*100)||0;
 
@@ -180,15 +193,48 @@ function render(){
       <td>${p}%</td>
       <td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
 
-    data.logs[currentYear][currentMonth][h].forEach((v,i)=>{
+    habits[h].forEach((v,i)=>{
       row+=`<td><input type="checkbox" ${v?"checked":""} onclick="toggle('${h}',${i})"></td>`;
     });
 
     row+="</tr>";
     table.innerHTML+=row;
   }
+
+  renderChart(habits,d);
+}
+
+/* ================= CHART ================= */
+function renderChart(habits,d){
+  let doneArr=Array(d).fill(0);
+  let totalArr=Array(d).fill(0);
+
+  for(let h in habits){
+    habits[h].forEach((v,i)=>{
+      totalArr[i]++;
+      if(v) doneArr[i]++;
+    });
+  }
+
+  let perc=doneArr.map((v,i)=>totalArr[i]?Math.round(v/totalArr[i]*100):0);
+
+  if(chart) chart.destroy();
+  chart=new Chart(monthChart,{
+    type:"line",
+    data:{
+      labels:Array.from({length:d},(_,i)=>i+1),
+      datasets:[{
+        label:"Tages-Erfüllung %",
+        data:perc,
+        fill:true,
+        tension:.3
+      }]
+    },
+    options:{scales:{y:{min:0,max:100}}}
+  });
 }
 </script>
 
 </body>
 </html>
+
