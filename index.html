@@ -184,7 +184,16 @@ th{background:#f7f7f7}
 <div id="weekView">
  <div class="weekNav">
   <button onclick="changeWeek(-1)">← Woche</button>
-  <button onclick="currentWeekOffset=0;renderWeek();renderSleepStats()">Aktuelle Woche</button>
+ <button onclick="
+  currentWeekOffset = 0;
+  renderWeek();
+  if (document.getElementById('statsView')?.style.display === 'block') {
+    renderSleepStats();
+  }
+">
+Aktuelle Woche
+</button>
+
   <button onclick="changeWeek(1)">Woche →</button>
 </div>
 
@@ -460,9 +469,15 @@ for(let h in data.habits){
     weekCards.appendChild(card);
   }
 }
-window.changeWeek=(d)=>{
-  currentWeekOffset+=d;
+window.changeWeek = (d) => {
+  currentWeekOffset += d;
   renderWeek();
+
+  if (document.getElementById("statsView")?.style.display === "block") {
+    renderSleepStats();
+  }
+};
+
   if(typeof renderSleepStats==="function"){
     renderSleepStats();
   }
@@ -537,6 +552,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
