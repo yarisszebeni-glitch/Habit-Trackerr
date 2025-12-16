@@ -289,9 +289,12 @@ onAuthStateChanged(auth,async user=>{
   let avg = (arr.reduce((a,b)=>a+b,0) / arr.length).toFixed(1);
   avgSleep.textContent = avg;
 
-  // Fehlender Schlaf
-  let missing = (7 * TARGET - arr.reduce((a,b)=>a+b,0));
-  missingSleep.textContent = missing > 0 ? missing.toFixed(1) : "0";
+  let targetTotal = arr.length * TARGET;
+let actualTotal = arr.reduce((a,b)=>a+b,0);
+let missing = targetTotal - actualTotal;
+
+missingSleep.textContent = missing > 0 ? missing.toFixed(1) : "0";
+
 
   // Chart
   if(window.sleepChartObj) window.sleepChartObj.destroy();
@@ -526,6 +529,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
