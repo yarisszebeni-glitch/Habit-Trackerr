@@ -489,10 +489,14 @@ function renderChart(habits,days){
 monthTab.onclick=()=>{
   monthTab.classList.add("active");
   weekTab.classList.remove("active");
+  statsTab.classList.remove("active");
+
   monthView.style.display="block";
   weekView.style.display="none";
+  statsView.style.display="none";
 };
-  statsTab.onclick=()=>{
+
+ statsTab.onclick=()=>{
   statsTab.classList.add("active");
   monthTab.classList.remove("active");
   weekTab.classList.remove("active");
@@ -504,16 +508,23 @@ monthTab.onclick=()=>{
   renderSleepStats();
 };
 
+
 weekTab.onclick=()=>{
   weekTab.classList.add("active");
   monthTab.classList.remove("active");
+  statsTab.classList.remove("active");
+
   monthView.style.display="none";
   weekView.style.display="block";
+  statsView.style.display="none";
+
   renderWeek();
 };
+
 </script>
 </body>
 </html> 
+
 
 
 
