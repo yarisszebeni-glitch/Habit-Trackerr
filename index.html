@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Habit Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{font-family:Arial;background:#f2f2f2;margin:0;padding:20px}
+.container{max-width:1200px;margin:auto;background:#fff;border-radius:12px;padding:20px}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{padding:6px 10px;border-radius:6px;border:none;background:#ddd;cursor:pointer}
+.tabs button.active{background:#6fa85c;color:#fff}
+
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{border:1px solid #ddd;padding:4px;text-align:center}
+th{background:#f7f7f7}
+.habit{text-align:left;font-weight:bold}
+.delete{color:red;cursor:pointer}
+
+.progress{height:8px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:4px}
+.progress div{height:100%;background:#6fa85c}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>Habit Tracker</h2>
+
+<button onclick="login()">Login</button>
+<button onclick="logout()">Logout</button>
+
+<br><br>
+
+<b>Jahr:</b>
+<select id="yearSelect"></select>
+
+<div class="tabs" id="months"></div>
+
+<br>
+<input id="habitInput" placeholder="Neuer Habit">
+<input id="goalInput" type="number" placeholder="Ziel (Tage)">
+<button onclick="addHabit()">Hinzufügen</button>
+
+<br><br>
+<table id="table"></table>
+
+</div>
+
+<script type="module">
+/* ================= FIREBASE ================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkWCxlVJGoNbXG7jHQ-KKgRrKtamQb6B0",
+  authDomain: "habit-tracker-71caa.firebaseapp.com",
+  projectId: "habit-tracker-71caa",
+  storageBucket: "habit-tracker-71caa.appspot.com",
+  messagingSenderId: "512623329438",
+  appId: "1:512623329438:web:b678351963b85e17d23b8f"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+/* ================= LOGIN ================= */
+window.login = async () => await signInWithPopup(auth, provider);
+window.logout = async () => await signOut(auth);
+
+/* ================= DATEN ================= */
+window.data = {
+  habits:{},
+  logs:{}
+};
+
+/* ================= CLOUD SAVE ================= */
+window.save = async function(){
+  if(!auth.currentUser) return;
+  await setDoc(doc(db,"users",auth.currentUser.uid), data);
+};
+
+/* ================= LOAD ================= */
+onAuthStateChanged(auth, async user=>{
+  if(!user) return;
+  const snap = await getDoc(doc(db,"users",user.uid));
+  if(snap.exists()){
+    data = snap.data();
+    render();
+  }
+});
+
+/* ================= BASIS ================= */
+const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
+const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+
+let currentYear=new Date().getFullYear();
+let currentMonth=new Date().getMonth();
+
+/* ================= INIT ================= */
+for(let y=currentYear-3;y<=currentYear+3;y++){
+  let o=document.createElement("option");
+  o.value=y;o.textContent=y;
+  if(y===currentYear)o.selected=true;
+  yearSelect.appendChild(o);
+}
+yearSelect.onchange=()=>{currentYear=+yearSelect.value;render();};
+
+monthNames.forEach((m,i)=>{
+  let b=document.createElement("button");
+  b.textContent=m;
+  if(i===currentMonth)b.classList.add("active");
+  b.onclick=()=>{
+    currentMonth=i;
+    document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    render();
+  };
+  months.appendChild(b);
+});
+
+/* ================= HABITS ================= */
+window.addHabit=function(){
+  let name=habitInput.value.trim();
+  if(!name||data.habits[name])return;
+  data.habits[name]=parseInt(goalInput.value)||30;
+  habitInput.value="";goalInput.value="";
+  save();render();
+};
+
+window.deleteHabit=function(name){
+  if(!confirm(`"${name}" löschen?`))return;
+  delete data.habits[name];
+  for(let y in data.logs){
+    for(let m in data.logs[y]) delete data.logs[y][m][name];
+  }
+  save();render();
+};
+
+window.toggle=function(h,i){
+  data.logs[currentYear][currentMonth][h][i]=
+  !data.logs[currentYear][currentMonth][h][i];
+  save();render();
+};
+
+/* ================= RENDER ================= */
+function render(){
+  const d=new Date(currentYear,currentMonth+1,0).getDate();
+  data.logs[currentYear]??={};
+  data.logs[currentYear][currentMonth]??={};
+
+  for(let h in data.habits){
+    if(!data.logs[currentYear][currentMonth][h]){
+      data.logs[currentYear][currentMonth][h]=Array(d).fill(false);
+    }
+  }
+
+  table.innerHTML="";
+  let header="<tr><th>Habit</th><th>%</th><th>✖</th>";
+  for(let i=1;i<=d;i++) header+=`<th>${i}</th>`;
+  header+="</tr>";
+  table.innerHTML+=header;
+
+  for(let h in data.logs[currentYear][currentMonth]){
+    let done=data.logs[currentYear][currentMonth][h].filter(v=>v).length;
+    let goal=data.habits[h];
+    let p=Math.round(done/goal*100)||0;
+
+    let row=`<tr>
+      <td class="habit">${h}
+        <div class="progress"><div style="width:${p}%"></div></div>
+      </td>
+      <td>${p}%</td>
+      <td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
+
+    data.logs[currentYear][currentMonth][h].forEach((v,i)=>{
+      row+=`<td><input type="checkbox" ${v?"checked":""} onclick="toggle('${h}',${i})"></td>`;
+    });
+
+    row+="</tr>";
+    table.innerHTML+=row;
+  }
+}
+</script>
+
+</body>
+</html>
