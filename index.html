@@ -135,9 +135,7 @@ th{background:#f7f7f7}
 <div class="tabs">
   <button id="monthTab" class="active">Monat</button>
   <button id="weekTab">Woche</button>
-  <button id="statsTab">Statistik</button>
 </div>
-
 
 <b>Jahr:</b>
 <select id="yearSelect"></select>
@@ -170,15 +168,6 @@ th{background:#f7f7f7}
   </div>
   <div class="weekCards" id="weekCards"></div>
 </div>
-<!-- ===== STATISTIK ===== -->
-<div id="statsView" style="display:none">
-  <h3>😴 Schlaf-Statistik</h3>
-
-  <p><b>Ø Schlafdauer:</b> <span id="avgSleep">–</span> h</p>
-  <p><b>Nächte ≥ 8h:</b> <span id="goalNights">–</span></p>
-
-  <canvas id="sleepChart" style="margin-top:20px"></canvas>
-</div>
 
 </div>
 
@@ -207,7 +196,7 @@ loginBtn.onclick=()=>signInWithPopup(auth,provider);
 logoutBtn.onclick=()=>signOut(auth);
 
 /* ================= DATA ================= */
-let data={habits:{},logs:{},sleep:{}};
+let data={habits:{},logs:{}};
 let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
 let chart;
@@ -346,74 +335,14 @@ function renderWeek(){
       <div class="circle" style="--deg:${p*3.6}deg">${p}%</div>`;
     names.forEach(h=>{
       habits[h]??=Array(daysInMonth(y,m)).fill(false);
-    if(h.toLowerCase()==="schlaf"){
-  let val=getSleep(y,m,i);
-  card.innerHTML+=`
-    <div class="weekTask">
-      😴 <span>Schlaf</span>
-      <input type="number" step="0.1" min="0" style="width:50px"
-        value="${val}"
-        onchange="setSleep(${y},${m},${i},this.value)">
-      <span>h ${val ? sleepColor(val) : ""}</span>
-    </div>`;
-}else{
-  card.innerHTML+=`
-    <div class="weekTask">
-      <input type="checkbox" ${habits[h][i]?"checked":""}
-        onchange="toggle('${h}',${i})">
-      <span>${h}</span>
-    </div>`;
-}
-
+      card.innerHTML+=`<div class="weekTask">
+        <input type="checkbox" ${habits[h][i]?"checked":""} onchange="toggle('${h}',${i})">
+        <span>${h}</span></div>`;
     });
     weekCards.appendChild(card);
   }
 }
 window.changeWeek=(d)=>{currentWeekOffset+=d;renderWeek();};
-function renderSleepStats(){
-  if(!data.sleep) return;
-
-  let arr = [];
-
-  for(let y in data.sleep){
-    for(let m in data.sleep[y]){
-      for(let d in data.sleep[y][m]){
-        arr.push(data.sleep[y][m][d]);
-      }
-    }
-  }
-
-  if(arr.length === 0) return;
-
-  // Durchschnitt
-  let avg = (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1);
-  avgSleep.textContent = avg;
-
-  // Ziel erreicht
-  goalNights.textContent = arr.filter(h=>h>=8).length;
-
-  // Chart
-  let labels = arr.map((_,i)=>i+1);
-  let chartData = {
-    labels,
-    datasets:[{
-      label:"Schlafstunden",
-      data:arr,
-      borderWidth:2,
-      tension:.3
-    }]
-  };
-
-  if(window.sleepChart) window.sleepChart.destroy();
-  window.sleepChart = new Chart(sleepChart,{
-    type:"line",
-    data:chartData,
-    options:{
-      scales:{y:{min:0,max:12}},
-      plugins:{legend:{display:false}}
-    }
-  });
-}
 
 /* ================= CHART ================= */
 function renderChart(habits,days){
@@ -440,40 +369,6 @@ weekTab.onclick=()=>{
   weekView.style.display="block";
   renderWeek();
 };
-  statsTab.onclick=()=>{
-  statsTab.classList.add("active");
-  monthTab.classList.remove("active");
-  weekTab.classList.remove("active");
-
-  monthView.style.display="none";
-  weekView.style.display="none";
-  statsView.style.display="block";
-
-  renderSleepStats();
-};
-
-  /* ================= SLEEP ================= */
-const SLEEP_GOAL = 8;
-
-function getSleep(y,m,d){
-  return data.sleep?.[y]?.[m]?.[d] ?? "";
-}
-
-function setSleep(y,m,d,val){
-  let h=parseFloat(val);
-  if(isNaN(h)) return;
-  data.sleep[y]??={};
-  data.sleep[y][m]??={};
-  data.sleep[y][m][d]=h;
-  save();
-}
-
-function sleepColor(h){
-  if(h>=8) return "🟢";
-  if(h>=6) return "🟡";
-  return "🔴";
-}
-
 </script>
 </body>
 </html> 
