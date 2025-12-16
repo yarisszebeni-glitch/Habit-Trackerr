@@ -264,54 +264,57 @@ onAuthStateChanged(auth,async user=>{
 
 /* ================= HELPERS ================= */
   function renderSleepStats(){
+  const TARGET = 8; // dein Optimum
+
+  let start = new Date();
+  start.setDate(start.getDate() - start.getDay() + 1 + currentWeekOffset * 7);
+
   let arr = [];
 
-  for(let y in data.sleep){
-    for(let m in data.sleep[y]){
-      for(let d in data.sleep[y][m]){
-        arr.push(data.sleep[y][m][d]);
-      }
-    }
+  for(let d=0; d<7; d++){
+    let date = new Date(start);
+    date.setDate(start.getDate() + d);
+
+    let y = date.getFullYear();
+    let m = date.getMonth();
+    let i = date.getDate() - 1;
+
+    let v = data.sleep?.[y]?.[m]?.[i];
+    if(typeof v === "number") arr.push(v);
   }
 
-  if(arr.length === 0){
-    avgSleep.textContent = "–";
-    sleepDeficit.textContent = "–";
-    goalNights.textContent = "–";
-    return;
-  }
-
-  const TARGET = 8;
+  if(arr.length === 0) return;
 
   // Ø Schlaf
-  let avg = arr.reduce((a,b)=>a+b,0) / arr.length;
-  avgSleep.textContent = avg.toFixed(1);
+  let avg = (arr.reduce((a,b)=>a+b,0) / arr.length).toFixed(1);
+  avgSleep.textContent = avg;
 
-  // Fehlende Stunden
-  let deficit = arr
-    .map(h => Math.max(0, TARGET - h))
-    .reduce((a,b)=>a+b,0);
-
-  sleepDeficit.textContent = deficit.toFixed(1);
-
-  // Zielnächte
-  goalNights.textContent = arr.filter(h=>h>=TARGET).length;
+  // Fehlender Schlaf
+  let missing = (7 * TARGET - arr.reduce((a,b)=>a+b,0));
+  missingSleep.textContent = missing > 0 ? missing.toFixed(1) : "0";
 
   // Chart
-  if(window.sleepChart) window.sleepChart.destroy();
-  window.sleepChart = new Chart(sleepChart,{
+  if(window.sleepChartObj) window.sleepChartObj.destroy();
+  window.sleepChartObj = new Chart(sleepChart,{
     type:"line",
     data:{
-      labels: arr.map((_,i)=>i+1),
-      datasets:[{
-        data: arr,
-        borderWidth:2,
-        tension:.3
-      }]
+      labels:["Mo","Di","Mi","Do","Fr","Sa","So"],
+      datasets:[
+        {
+          data: arr,
+          borderWidth:2,
+          tension:.3
+        },
+        {
+          data: Array(7).fill(TARGET),
+          borderDash:[5,5],
+          borderWidth:1
+        }
+      ]
     },
     options:{
-      scales:{y:{min:0,max:12}},
-      plugins:{legend:{display:false}}
+      scales:{ y:{ min:0, max:12 }},
+      plugins:{ legend:{ display:false }}
     }
   });
 }
@@ -523,6 +526,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
