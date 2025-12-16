@@ -220,6 +220,8 @@ let data={
   logs:{},
   sleep:{}   // 👈 NEU
 };
+// 🔧 Sicherheits-Fix für bestehende User
+data.sleep ??= {};
 
 let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
@@ -237,8 +239,13 @@ onAuthStateChanged(auth,async user=>{
   }
   userStatus.textContent="Eingeloggt als: "+user.email;
   const snap=await getDoc(doc(db,"users",user.uid));
-  if(snap.exists()) data=snap.data();
-  else await setDoc(doc(db,"users",user.uid),data);
+ if(snap.exists()){
+  data=snap.data();
+  data.sleep ??= {};   // 🔧 WICHTIG
+}else{
+  await setDoc(doc(db,"users",user.uid),data);
+}
+
   renderMonth();
   renderWeek();
 });
@@ -429,6 +436,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
