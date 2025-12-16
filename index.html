@@ -21,6 +21,7 @@ body{
   padding:20px;
 }
 
+/* ===== TABS ===== */
 .tabs{
   display:flex;
   gap:6px;
@@ -39,10 +40,8 @@ body{
   color:#fff;
 }
 
-.tableWrapper{
-  overflow-x:auto;
-}
-
+/* ===== TABLE ===== */
+.tableWrapper{overflow-x:auto}
 table{
   border-collapse:collapse;
   width:100%;
@@ -54,17 +53,9 @@ th,td{
   padding:4px;
   text-align:center;
 }
-th{
-  background:#f7f7f7;
-}
-.habit{
-  text-align:left;
-  font-weight:bold;
-}
-.delete{
-  color:red;
-  cursor:pointer;
-}
+th{background:#f7f7f7}
+.habit{text-align:left;font-weight:bold}
+.delete{color:red;cursor:pointer}
 
 .progress{
   height:8px;
@@ -77,25 +68,53 @@ th{
   height:100%;
   background:#6fa85c;
 }
+.empty{background:#fafafa}
 
-#userStatus{
-  margin-bottom:10px;
-  font-weight:bold;
-}
-
-.empty{
-  background:#fafafa;
-}
-
-/* ===== CHART FIX ===== */
+/* ===== CHART ===== */
 .chartWrapper{
   height:320px;
   margin-top:30px;
 }
 @media(max-width:768px){
-  .chartWrapper{
-    height:220px;
-  }
+  .chartWrapper{height:220px}
+}
+
+/* ===== WEEK VIEW ===== */
+#weekView{display:none}
+.weekNav{
+  display:flex;
+  justify-content:space-between;
+  margin:10px 0;
+}
+.weekCards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+}
+.weekCard{
+  background:#6fa85c;
+  color:white;
+  border-radius:12px;
+  padding:12px;
+}
+.weekCard h4{margin:0}
+.circle{
+  width:80px;
+  height:80px;
+  border-radius:50%;
+  background:conic-gradient(#fff var(--deg),rgba(255,255,255,.3) 0);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  color:#2f5d25;
+  margin:8px auto;
+}
+.weekTask{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  font-size:13px;
 }
 </style>
 
@@ -113,6 +132,11 @@ th{
 
 <hr>
 
+<div class="tabs">
+  <button id="monthTab" class="active">Monat</button>
+  <button id="weekTab">Woche</button>
+</div>
+
 <b>Jahr:</b>
 <select id="yearSelect"></select>
 
@@ -125,12 +149,24 @@ th{
 
 <br><br>
 
-<div class="tableWrapper">
-  <table id="table"></table>
+<!-- ===== MONAT ===== -->
+<div id="monthView">
+  <div class="tableWrapper">
+    <table id="table"></table>
+  </div>
+  <div class="chartWrapper">
+    <canvas id="monthChart"></canvas>
+  </div>
 </div>
 
-<div class="chartWrapper">
-  <canvas id="monthChart"></canvas>
+<!-- ===== WOCHE ===== -->
+<div id="weekView">
+  <div class="weekNav">
+    <button onclick="changeWeek(-1)">← Woche</button>
+    <button onclick="currentWeekOffset=0;renderWeek()">Aktuelle Woche</button>
+    <button onclick="changeWeek(1)">Woche →</button>
+  </div>
+  <div class="weekCards" id="weekCards"></div>
 </div>
 
 </div>
@@ -138,77 +174,53 @@ th{
 <script type="module">
 /* ================= FIREBASE ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  onAuthStateChanged,
-  signOut,
-  setPersistence,
-  browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCkWCxlVJGoNbXG7jHQ-KKgRrKtamQb6B0",
-  authDomain: "habit-tracker-71caa.firebaseapp.com",
-  projectId: "habit-tracker-71caa",
-  storageBucket: "habit-tracker-71caa.appspot.com",
-  messagingSenderId: "512623329438",
-  appId: "1:512623329438:web:b678351963b85e17d23b8f"
+const firebaseConfig={
+  apiKey:"AIzaSyCkWCxlVJGoNbXG7jHQ-KKgRrKtamQb6B0",
+  authDomain:"habit-tracker-71caa.firebaseapp.com",
+  projectId:"habit-tracker-71caa",
+  storageBucket:"habit-tracker-71caa.appspot.com",
+  messagingSenderId:"512623329438",
+  appId:"1:512623329438:web:b678351963b85e17d23b8f"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
-
-setPersistence(auth, browserLocalPersistence);
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+const provider=new GoogleAuthProvider();
 
 /* ================= LOGIN ================= */
-loginBtn.onclick = async () => {
-  try{
-    await signInWithPopup(auth, provider);
-  }catch(e){
-    alert("Login fehlgeschlagen: "+e.message);
-  }
-};
-logoutBtn.onclick = () => signOut(auth);
+loginBtn.onclick=()=>signInWithPopup(auth,provider);
+logoutBtn.onclick=()=>signOut(auth);
 
-/* ================= DATEN ================= */
+/* ================= DATA ================= */
 let data={habits:{},logs:{}};
 let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
 let chart;
+let currentWeekOffset=0;
+
+const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
+const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 
 /* ================= AUTH ================= */
-onAuthStateChanged(auth, async user=>{
+onAuthStateChanged(auth,async user=>{
   if(!user){
     userStatus.textContent="Nicht eingeloggt";
-    table.innerHTML="";
-    data={habits:{},logs:{}};
     return;
   }
   userStatus.textContent="Eingeloggt als: "+user.email;
   const snap=await getDoc(doc(db,"users",user.uid));
   if(snap.exists()) data=snap.data();
   else await setDoc(doc(db,"users",user.uid),data);
-  render();
+  renderMonth();
+  renderWeek();
 });
 
-/* ================= BASIS ================= */
-const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
-const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-
-function daysInMonth(y,m){
-  return new Date(y,m+1,0).getDate();
-}
-
+/* ================= HELPERS ================= */
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
 async function save(){
   if(!auth.currentUser) return;
   await setDoc(doc(db,"users",auth.currentUser.uid),data);
@@ -217,153 +229,150 @@ async function save(){
 /* ================= INIT ================= */
 for(let y=currentYear-3;y<=currentYear+3;y++){
   let o=document.createElement("option");
-  o.value=y;
-  o.textContent=y;
-  if(y===currentYear) o.selected=true;
+  o.value=y;o.textContent=y;
+  if(y===currentYear)o.selected=true;
   yearSelect.appendChild(o);
 }
-yearSelect.onchange=()=>{
-  currentYear=+yearSelect.value;
-  render();
-};
+yearSelect.onchange=()=>{currentYear=+yearSelect.value;renderMonth();};
 
 monthNames.forEach((m,i)=>{
   let b=document.createElement("button");
   b.textContent=m;
-  if(i===currentMonth) b.classList.add("active");
+  if(i===currentMonth)b.classList.add("active");
   b.onclick=()=>{
     currentMonth=i;
-    document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll("#months button").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
-    render();
+    renderMonth();
   };
   months.appendChild(b);
 });
 
 /* ================= HABITS ================= */
 window.addHabit=()=>{
-  let name=habitInput.value.trim();
-  if(!name||data.habits[name]) return;
-  data.habits[name]=parseInt(goalInput.value)||30;
-  habitInput.value="";
-  goalInput.value="";
-  save();
-  render();
+  let n=habitInput.value.trim();
+  if(!n||data.habits[n])return;
+  data.habits[n]=parseInt(goalInput.value)||30;
+  habitInput.value="";goalInput.value="";
+  save();renderMonth();renderWeek();
 };
-
-window.deleteHabit=(name)=>{
-  if(!confirm(`"${name}" löschen?`)) return;
-  delete data.habits[name];
-  for(let y in data.logs){
-    for(let m in data.logs[y]){
-      delete data.logs[y][m][name];
-    }
-  }
-  save();
-  render();
+window.deleteHabit=(n)=>{
+  if(!confirm("Löschen?"))return;
+  delete data.habits[n];
+  for(let y in data.logs)for(let m in data.logs[y])delete data.logs[y][m][n];
+  save();renderMonth();renderWeek();
 };
-
 window.toggle=(h,i)=>{
-  data.logs[currentYear][currentMonth][h][i]=
-    !data.logs[currentYear][currentMonth][h][i];
-  save();
-  render();
+  data.logs[currentYear]??={};
+  data.logs[currentYear][currentMonth]??={};
+  data.logs[currentYear][currentMonth][h][i]=!data.logs[currentYear][currentMonth][h][i];
+  save();renderMonth();renderWeek();
 };
 
-/* ================= RENDER ================= */
-function render(){
+/* ================= MONAT ================= */
+function renderMonth(){
   const days=daysInMonth(currentYear,currentMonth);
   const weeks=Math.ceil(days/7);
 
   data.logs[currentYear]??={};
   data.logs[currentYear][currentMonth]??={};
-
-  for(let h in data.habits){
-    data.logs[currentYear][currentMonth][h] ??= Array(days).fill(false);
-  }
+  for(let h in data.habits)
+    data.logs[currentYear][currentMonth][h]??=Array(days).fill(false);
 
   table.innerHTML="";
-
-  let h1=`<tr>
-    <th rowspan="2">Habit</th>
-    <th rowspan="2">%</th>
-    <th rowspan="2">✖</th>`;
-  for(let w=1;w<=weeks;w++) h1+=`<th colspan="7">Woche ${w}</th>`;
+  let h1=`<tr><th rowspan="2">Habit</th><th rowspan="2">%</th><th rowspan="2">✖</th>`;
+  for(let w=1;w<=weeks;w++)h1+=`<th colspan="7">Woche ${w}</th>`;
   h1+="</tr>";
 
   let h2="<tr>";
   for(let i=0;i<weeks*7;i++){
-    let day=i+1<=days?i+1:"";
+    let d=i+1<=days?i+1:"";
     let wd=i<days?weekDays[(new Date(currentYear,currentMonth,i+1).getDay()+6)%7]:"";
-    h2+=`<th>${wd}<br>${day}</th>`;
+    h2+=`<th>${wd}<br>${d}</th>`;
   }
   h2+="</tr>";
-
   table.innerHTML+=h1+h2;
 
   let habits=data.logs[currentYear][currentMonth];
-
   for(let h in habits){
     let done=habits[h].filter(v=>v).length;
     let p=Math.round(done/data.habits[h]*100)||0;
-
-    let row=`<tr>
-      <td class="habit">${h}
-        <div class="progress"><div style="width:${p}%"></div></div>
-      </td>
-      <td>${p}%</td>
-      <td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
-
+    let row=`<tr><td class="habit">${h}<div class="progress"><div style="width:${p}%"></div></div></td>
+      <td>${p}%</td><td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
     for(let i=0;i<weeks*7;i++){
-      if(i<days){
-        row+=`<td><input type="checkbox" ${habits[h][i]?"checked":""}
-          onclick="toggle('${h}',${i})"></td>`;
-      }else{
-        row+=`<td class="empty"></td>`;
-      }
+      if(i<days)row+=`<td><input type="checkbox" ${habits[h][i]?"checked":""} onclick="toggle('${h}',${i})"></td>`;
+      else row+=`<td class="empty"></td>`;
     }
     row+="</tr>";
     table.innerHTML+=row;
   }
-
   renderChart(habits,days);
 }
 
+/* ================= WEEK ================= */
+function renderWeek(){
+  weekCards.innerHTML="";
+  const start=new Date();
+  start.setDate(start.getDate()-start.getDay()+1+(currentWeekOffset*7));
+
+  for(let d=0;d<7;d++){
+    let date=new Date(start);
+    date.setDate(start.getDate()+d);
+
+    let y=date.getFullYear(),m=date.getMonth(),i=date.getDate()-1;
+    data.logs[y]??={};
+    data.logs[y][m]??={};
+
+    let habits=data.logs[y][m];
+    let names=Object.keys(data.habits);
+    let done=0;
+    names.forEach(h=>{if(habits[h]?.[i])done++;});
+    let p=names.length?Math.round(done/names.length*100):0;
+
+    let card=document.createElement("div");
+    card.className="weekCard";
+    card.innerHTML=`<h4>${weekDays[d]}</h4><small>${date.toLocaleDateString()}</small>
+      <div class="circle" style="--deg:${p*3.6}deg">${p}%</div>`;
+    names.forEach(h=>{
+      habits[h]??=Array(daysInMonth(y,m)).fill(false);
+      card.innerHTML+=`<div class="weekTask">
+        <input type="checkbox" ${habits[h][i]?"checked":""} onchange="toggle('${h}',${i})">
+        <span>${h}</span></div>`;
+    });
+    weekCards.appendChild(card);
+  }
+}
+window.changeWeek=(d)=>{currentWeekOffset+=d;renderWeek();};
+
 /* ================= CHART ================= */
 function renderChart(habits,days){
-  let doneArr=Array(days).fill(0);
-  let totalArr=Array(days).fill(0);
-
-  for(let h in habits){
-    habits[h].forEach((v,i)=>{
-      totalArr[i]++;
-      if(v) doneArr[i]++;
-    });
-  }
-
-  let perc=doneArr.map((v,i)=>totalArr[i]?Math.round(v/totalArr[i]*100):0);
-
-  if(chart) chart.destroy();
-  chart=new Chart(monthChart,{
-    type:"line",
-    data:{
-      labels:Array.from({length:days},(_,i)=>i+1),
-      datasets:[{
-        data:perc,
-        fill:true,
-        tension:.3
-      }]
-    },
-    options:{
-      responsive:true,
-      scales:{y:{min:0,max:100}},
-      plugins:{legend:{display:false}}
-    }
-  });
+  let done=Array(days).fill(0),tot=Array(days).fill(0);
+  for(let h in habits)habits[h].forEach((v,i)=>{tot[i]++;if(v)done[i]++;});
+  let perc=done.map((v,i)=>tot[i]?Math.round(v/tot[i]*100):0);
+  if(chart)chart.destroy();
+  chart=new Chart(monthChart,{type:"line",data:{labels:[...Array(days).keys()].map(i=>i+1),
+    datasets:[{data:perc,fill:true,tension:.3}]},
+    options:{responsive:true,scales:{y:{min:0,max:100}},plugins:{legend:{display:false}}}});
 }
+
+/* ===== VIEW SWITCH ===== */
+monthTab.onclick=()=>{
+  monthTab.classList.add("active");
+  weekTab.classList.remove("active");
+  monthView.style.display="block";
+  weekView.style.display="none";
+};
+weekTab.onclick=()=>{
+  weekTab.classList.add("active");
+  monthTab.classList.remove("active");
+  monthView.style.display="none";
+  weekView.style.display="block";
+  renderWeek();
+};
 </script>
 </body>
 </html>
+
 
 
 
