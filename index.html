@@ -6,38 +6,95 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{font-family:Arial;background:#f2f2f2;margin:0;padding:20px}
-.container{max-width:1200px;margin:auto;background:#fff;border-radius:12px;padding:20px}
+body{
+  font-family:Arial;
+  background:#f2f2f2;
+  margin:0;
+  padding:15px;
+  overflow-x:hidden;
+}
+
+.container{
+  max-width:1200px;
+  margin:auto;
+  background:#fff;
+  border-radius:12px;
+  padding:15px;
+}
+
+h2{text-align:center}
 
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.tabs button{padding:6px 10px;border-radius:6px;border:none;background:#ddd;cursor:pointer}
-.tabs button.active{background:#6fa85c;color:#fff}
+.tabs button{
+  padding:6px 10px;
+  border-radius:6px;
+  border:none;
+  background:#ddd;
+  cursor:pointer
+}
+.tabs button.active{
+  background:#6fa85c;
+  color:#fff
+}
 
-table{border-collapse:collapse;width:100%;font-size:12px}
-th,td{border:1px solid #ddd;padding:4px;text-align:center}
+.tableWrapper{
+  width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+table{
+  border-collapse:collapse;
+  width:100%;
+  font-size:12px;
+  min-width:900px;
+}
+
+th,td{
+  border:1px solid #ddd;
+  padding:4px;
+  text-align:center
+}
+
 th{background:#f7f7f7}
+
 .habit{text-align:left;font-weight:bold}
 .delete{color:red;cursor:pointer}
 
-.progress{height:8px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:4px}
-.progress div{height:100%;background:#6fa85c}
+.progress{
+  height:8px;
+  background:#ddd;
+  border-radius:6px;
+  overflow:hidden;
+  margin-top:4px
+}
+.progress div{
+  height:100%;
+  background:#6fa85c
+}
 
-#userStatus{margin-bottom:10px;font-weight:bold}
+.chartWrapper{
+  margin-top:30px;
+  width:100%;
+}
+
+@media(max-width:768px){
+  canvas{max-height:220px !important}
+}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body>
-<div class="container">
 
+<div class="container">
 <h2>Habit Tracker</h2>
 
 <div id="userStatus">Nicht eingeloggt</div>
-<button onclick="login()">Login</button>
-<button onclick="logout()">Logout</button>
+<button id="loginBtn">Login</button>
+<button id="logoutBtn">Logout</button>
 
-<hr>
+<br><br>
 
 <b>Jahr:</b>
 <select id="yearSelect"></select>
@@ -49,10 +106,13 @@ th{background:#f7f7f7}
 <input id="goalInput" type="number" placeholder="Ziel (Tage)">
 <button onclick="addHabit()">Hinzufügen</button>
 
-<br><br>
+<div class="tableWrapper">
 <table id="table"></table>
+</div>
 
-<canvas id="monthChart" style="margin-top:30px"></canvas>
+<div class="chartWrapper">
+  <canvas id="monthChart"></canvas>
+</div>
 
 </div>
 
@@ -64,21 +124,23 @@ import {
   GoogleAuthProvider,
   signInWithRedirect,
   getRedirectResult,
+  onAuthStateChanged,
   signOut,
-  onAuthStateChanged
+  setPersistence,
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore,
   doc,
-  setDoc,
-  getDoc
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkWCxlVJGoNbXG7jHQ-KKgRrKtamQb6B0",
   authDomain: "habit-tracker-71caa.firebaseapp.com",
   projectId: "habit-tracker-71caa",
-  storageBucket: "habit-tracker-71caa.appspot.com",
+  storageBucket: "habit-tracker-71caa.firebasestorage.app",
   messagingSenderId: "512623329438",
   appId: "1:512623329438:web:b678351963b85e17d23b8f"
 };
@@ -88,54 +150,163 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-/* ================= LOGIN (iOS-SICHER) ================= */
-window.login = () => {
-  signInWithRedirect(auth, provider);
-};
+await setPersistence(auth, browserLocalPersistence);
 
-window.logout = async () => {
-  await signOut(auth);
-};
+/* 🔑 WICHTIGER FIX */
+let authReady = false;
 
-/* ================= DATEN ================= */
-let data = { habits:{}, logs:{} };
+getRedirectResult(auth)
+  .then(()=>authReady=true)
+  .catch(()=>authReady=true);
 
-/* ================= SAVE ================= */
-async function save(){
-  if(!auth.currentUser) return;
-  await setDoc(doc(db,"users",auth.currentUser.uid), data);
-}
-
-/* ================= AUTH STATE ================= */
-onAuthStateChanged(auth, async user=>{
-  if(!user){
-    userStatus.textContent="Nicht eingeloggt";
-    return;
-  }
-
-  userStatus.textContent="Eingeloggt als: "+user.email;
-
-  const snap = await getDoc(doc(db,"users",user.uid));
-  if(snap.exists()){
-    data = snap.data();
-  } else {
-    await save();
-  }
-  render();
-});
-
-/* ================= REDIRECT RESULT (WICHTIG FÜR iOS) ================= */
-getRedirectResult(auth).catch(err=>{
-  console.warn("Redirect Info:", err.message);
-});
-
-/* ================= BASIS ================= */
+/* ================= HABIT LOGIC ================= */
 const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
 const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 
 let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
 let chart;
+let userId=null;
+
+let data={habits:{},logs:{}};
+
+function daysInMonth(y,m){
+  return new Date(y,m+1,0).getDate();
+}
+
+async function save(){
+  if(!userId)return;
+  await setDoc(doc(db,"users",userId),data);
+}
+
+function addHabit(){
+  let name=habitInput.value.trim();
+  if(!name||data.habits[name])return;
+  data.habits[name]=30;
+  habitInput.value="";
+  save();
+  render();
+}
+
+function deleteHabit(h){
+  delete data.habits[h];
+  for(let y in data.logs){
+    for(let m in data.logs[y]){
+      delete data.logs[y][m][h];
+    }
+  }
+  save();
+  render();
+}
+
+function toggle(h,i){
+  data.logs[currentYear][currentMonth][h][i]=
+    !data.logs[currentYear][currentMonth][h][i];
+  save();
+  render();
+}
+
+function render(){
+  const d=daysInMonth(currentYear,currentMonth);
+  data.logs[currentYear]??={};
+  data.logs[currentYear][currentMonth]??={};
+
+  for(let h in data.habits){
+    if(!data.logs[currentYear][currentMonth][h]){
+      data.logs[currentYear][currentMonth][h]=Array(d).fill(false);
+    }
+  }
+
+  table.innerHTML="";
+  let weeks=Math.ceil(d/7);
+
+  let h1=`<tr><th rowspan="2">Habit</th><th rowspan="2">%</th><th rowspan="2">✖</th>`;
+  for(let w=1;w<=weeks;w++)h1+=`<th colspan="7">Woche ${w}</th>`;
+  h1+="</tr>";
+
+  let h2="<tr>";
+  for(let i=1;i<=d;i++){
+    h2+=`<th>${weekDays[(i-1)%7]}<br>${i}</th>`;
+  }
+  h2+="</tr>";
+
+  table.innerHTML+=h1+h2;
+
+  for(let h in data.logs[currentYear][currentMonth]){
+    let arr=data.logs[currentYear][currentMonth][h];
+    let done=arr.filter(v=>v).length;
+    let p=Math.round(done/data.habits[h]*100)||0;
+
+    let row=`<tr>
+      <td class="habit">${h}
+        <div class="progress"><div style="width:${p}%"></div></div>
+      </td>
+      <td>${p}%</td>
+      <td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
+
+    arr.forEach((v,i)=>{
+      row+=`<td><input type="checkbox" ${v?"checked":""}
+      onclick="toggle('${h}',${i})"></td>`;
+    });
+
+    row+="</tr>";
+    table.innerHTML+=row;
+  }
+
+  renderChart();
+}
+
+function renderChart(){
+  const d=daysInMonth(currentYear,currentMonth);
+  let arr=Array(d).fill(0),tot=Array(d).fill(0);
+
+  let habits=data.logs[currentYear]?.[currentMonth]||{};
+  for(let h in habits){
+    habits[h].forEach((v,i)=>{
+      if(v)arr[i]++;
+      tot[i]++;
+    });
+  }
+
+  let perc=arr.map((v,i)=>tot[i]?Math.round(v/tot[i]*100):0);
+
+  if(chart)chart.destroy();
+  chart=new Chart(monthChart,{
+    type:"line",
+    data:{
+      labels:Array.from({length:d},(_,i)=>i+1),
+      datasets:[{data:perc,fill:true,tension:.3}]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{y:{min:0,max:100}},
+      plugins:{legend:{display:false}}
+    }
+  });
+}
+
+/* ================= AUTH ================= */
+loginBtn.onclick=()=>signInWithRedirect(auth,provider);
+logoutBtn.onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth,async user=>{
+  if(!authReady)return;
+
+  if(!user){
+    userStatus.textContent="Nicht eingeloggt";
+    return;
+  }
+
+  userId=user.uid;
+  userStatus.textContent="Eingeloggt als "+user.email;
+
+  const snap=await getDoc(doc(db,"users",userId));
+  if(snap.exists())data=snap.data();
+  else await save();
+
+  render();
+});
 
 /* ================= INIT ================= */
 for(let y=currentYear-3;y<=currentYear+3;y++){
@@ -158,106 +329,9 @@ monthNames.forEach((m,i)=>{
   };
   months.appendChild(b);
 });
-
-/* ================= HABITS ================= */
-window.addHabit=function(){
-  let name=habitInput.value.trim();
-  if(!name||data.habits[name])return;
-  data.habits[name]=parseInt(goalInput.value)||30;
-  habitInput.value="";goalInput.value="";
-  save();render();
-};
-
-window.deleteHabit=function(name){
-  if(!confirm(`"${name}" löschen?`))return;
-  delete data.habits[name];
-  for(let y in data.logs){
-    for(let m in data.logs[y]) delete data.logs[y][m][name];
-  }
-  save();render();
-};
-
-window.toggle=function(h,i){
-  data.logs[currentYear][currentMonth][h][i]=
-    !data.logs[currentYear][currentMonth][h][i];
-  save();render();
-};
-
-/* ================= RENDER ================= */
-function render(){
-  const d=new Date(currentYear,currentMonth+1,0).getDate();
-  data.logs[currentYear]??={};
-  data.logs[currentYear][currentMonth]??={};
-
-  for(let h in data.habits){
-    if(!data.logs[currentYear][currentMonth][h]){
-      data.logs[currentYear][currentMonth][h]=Array(d).fill(false);
-    }
-  }
-
-  table.innerHTML="";
-  let header="<tr><th>Habit</th><th>%</th><th>✖</th>";
-  for(let i=1;i<=d;i++) header+=`<th>${i}</th>`;
-  header+="</tr>";
-  table.innerHTML+=header;
-
-  const habits=data.logs[currentYear][currentMonth];
-
-  for(let h in habits){
-    let done=habits[h].filter(v=>v).length;
-    let goal=data.habits[h];
-    let p=Math.round(done/goal*100)||0;
-
-    let row=`<tr>
-      <td class="habit">${h}
-        <div class="progress"><div style="width:${p}%"></div></div>
-      </td>
-      <td>${p}%</td>
-      <td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
-
-    habits[h].forEach((v,i)=>{
-      row+=`<td><input type="checkbox" ${v?"checked":""} onclick="toggle('${h}',${i})"></td>`;
-    });
-
-    row+="</tr>";
-    table.innerHTML+=row;
-  }
-
-  renderChart(habits,d);
-}
-
-/* ================= CHART ================= */
-function renderChart(habits,d){
-  let doneArr=Array(d).fill(0);
-  let totalArr=Array(d).fill(0);
-
-  for(let h in habits){
-    habits[h].forEach((v,i)=>{
-      totalArr[i]++;
-      if(v) doneArr[i]++;
-    });
-  }
-
-  let perc=doneArr.map((v,i)=>totalArr[i]?Math.round(v/totalArr[i]*100):0);
-
-  if(chart) chart.destroy();
-  chart=new Chart(monthChart,{
-    type:"line",
-    data:{
-      labels:Array.from({length:d},(_,i)=>i+1),
-      datasets:[{
-        label:"Tages-Erfüllung %",
-        data:perc,
-        fill:true,
-        tension:.3
-      }]
-    },
-    options:{scales:{y:{min:0,max:100}}}
-  });
-}
 </script>
-
 </body>
 </html>
+
 
 
