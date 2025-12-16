@@ -13,7 +13,6 @@ body{
   padding:15px;
   overflow-x:hidden;
 }
-
 .container{
   max-width:1200px;
   margin:auto;
@@ -21,8 +20,9 @@ body{
   border-radius:12px;
   padding:15px;
 }
-
 h2{text-align:center}
+
+button{cursor:pointer}
 
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tabs button{
@@ -30,11 +30,10 @@ h2{text-align:center}
   border-radius:6px;
   border:none;
   background:#ddd;
-  cursor:pointer
 }
 .tabs button.active{
   background:#6fa85c;
-  color:#fff
+  color:#fff;
 }
 
 .tableWrapper{
@@ -46,16 +45,14 @@ h2{text-align:center}
 table{
   border-collapse:collapse;
   width:100%;
-  font-size:12px;
   min-width:900px;
+  font-size:12px;
 }
-
 th,td{
   border:1px solid #ddd;
   padding:4px;
-  text-align:center
+  text-align:center;
 }
-
 th{background:#f7f7f7}
 
 .habit{text-align:left;font-weight:bold}
@@ -66,11 +63,11 @@ th{background:#f7f7f7}
   background:#ddd;
   border-radius:6px;
   overflow:hidden;
-  margin-top:4px
+  margin-top:4px;
 }
 .progress div{
   height:100%;
-  background:#6fa85c
+  background:#6fa85c;
 }
 
 .chartWrapper{
@@ -79,7 +76,7 @@ th{background:#f7f7f7}
 }
 
 @media(max-width:768px){
-  canvas{max-height:220px !important}
+  canvas{max-height:220px !important;}
 }
 </style>
 
@@ -91,10 +88,10 @@ th{background:#f7f7f7}
 <h2>Habit Tracker</h2>
 
 <div id="userStatus">Nicht eingeloggt</div>
-<button id="loginBtn">Login</button>
+<button id="loginBtn">Login mit Google</button>
 <button id="logoutBtn">Logout</button>
 
-<br><br>
+<hr>
 
 <b>Jahr:</b>
 <select id="yearSelect"></select>
@@ -107,7 +104,7 @@ th{background:#f7f7f7}
 <button onclick="addHabit()">Hinzufügen</button>
 
 <div class="tableWrapper">
-<table id="table"></table>
+  <table id="table"></table>
 </div>
 
 <div class="chartWrapper">
@@ -122,8 +119,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   onAuthStateChanged,
   signOut,
   setPersistence,
@@ -150,14 +146,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-await setPersistence(auth, browserLocalPersistence);
-
-/* 🔑 WICHTIGER FIX */
-let authReady = false;
-
-getRedirectResult(auth)
-  .then(()=>authReady=true)
-  .catch(()=>authReady=true);
+/* 🔒 Session merken (ohne await!) */
+setPersistence(auth, browserLocalPersistence);
 
 /* ================= HABIT LOGIC ================= */
 const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
@@ -181,9 +171,11 @@ async function save(){
 
 function addHabit(){
   let name=habitInput.value.trim();
+  let goal=parseInt(goalInput.value)||30;
   if(!name||data.habits[name])return;
-  data.habits[name]=30;
+  data.habits[name]=goal;
   habitInput.value="";
+  goalInput.value="";
   save();
   render();
 }
@@ -259,8 +251,8 @@ function render(){
 function renderChart(){
   const d=daysInMonth(currentYear,currentMonth);
   let arr=Array(d).fill(0),tot=Array(d).fill(0);
-
   let habits=data.logs[currentYear]?.[currentMonth]||{};
+
   for(let h in habits){
     habits[h].forEach((v,i)=>{
       if(v)arr[i]++;
@@ -287,14 +279,22 @@ function renderChart(){
 }
 
 /* ================= AUTH ================= */
-loginBtn.onclick=()=>signInWithRedirect(auth,provider);
+loginBtn.onclick=async()=>{
+  try{
+    await signInWithPopup(auth,provider);
+  }catch(e){
+    alert(e.message);
+  }
+};
+
 logoutBtn.onclick=()=>signOut(auth);
 
 onAuthStateChanged(auth,async user=>{
-  if(!authReady)return;
-
   if(!user){
     userStatus.textContent="Nicht eingeloggt";
+    userId=null;
+    data={habits:{},logs:{}};
+    table.innerHTML="";
     return;
   }
 
@@ -302,7 +302,7 @@ onAuthStateChanged(auth,async user=>{
   userStatus.textContent="Eingeloggt als "+user.email;
 
   const snap=await getDoc(doc(db,"users",userId));
-  if(snap.exists())data=snap.data();
+  if(snap.exists()) data=snap.data();
   else await save();
 
   render();
