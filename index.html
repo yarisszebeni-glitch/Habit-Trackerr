@@ -11,6 +11,7 @@ body{
   background:#f2f2f2;
   margin:0;
   padding:20px;
+  overflow-x:hidden;
 }
 .container{
   max-width:1200px;
@@ -21,52 +22,99 @@ body{
 }
 
 /* ===== TABS ===== */
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.tabs button{padding:6px 10px;border-radius:6px;border:none;background:#ddd;cursor:pointer}
-.tabs button.active{background:#6fa85c;color:#fff}
+.tabs{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+.tabs button{
+  padding:6px 10px;
+  border-radius:6px;
+  border:none;
+  background:#ddd;
+  cursor:pointer;
+}
+.tabs button.active{
+  background:#6fa85c;
+  color:#fff;
+}
 
 /* ===== TABLE ===== */
 .tableWrapper{overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:12px;min-width:900px}
-th,td{border:1px solid #ddd;padding:4px;text-align:center}
+table{
+  border-collapse:collapse;
+  width:100%;
+  font-size:12px;
+  min-width:900px;
+}
+th,td{
+  border:1px solid #ddd;
+  padding:4px;
+  text-align:center;
+}
 th{background:#f7f7f7}
 .habit{text-align:left;font-weight:bold}
 .delete{color:red;cursor:pointer}
-.progress{height:8px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:4px}
-.progress div{height:100%;background:#6fa85c}
+
+.progress{
+  height:8px;
+  background:#ddd;
+  border-radius:6px;
+  overflow:hidden;
+  margin-top:4px;
+}
+.progress div{
+  height:100%;
+  background:#6fa85c;
+}
 .empty{background:#fafafa}
 
 /* ===== CHART ===== */
-.chartWrapper{height:300px;margin-top:20px}
+.chartWrapper{
+  height:320px;
+  margin-top:30px;
+}
+@media(max-width:768px){
+  .chartWrapper{height:220px}
+}
 
 /* ===== WEEK VIEW ===== */
 #weekView{display:none}
-.weekNav{display:flex;justify-content:space-between;margin:10px 0}
-.weekCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.weekNav{
+  display:flex;
+  justify-content:space-between;
+  margin:10px 0;
+}
+.weekCards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+}
 .weekCard{
   background:#6fa85c;
   color:white;
   border-radius:12px;
   padding:12px;
 }
+.weekCard h4{margin:0}
 .circle{
-  width:80px;height:80px;border-radius:50%;
+  width:80px;
+  height:80px;
+  border-radius:50%;
   background:conic-gradient(#fff var(--deg),rgba(255,255,255,.3) 0);
-  display:flex;align-items:center;justify-content:center;
-  font-weight:bold;color:#2f5d25;margin:8px auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  color:#2f5d25;
+  margin:8px auto;
 }
-.weekTask{display:flex;gap:6px;align-items:center;font-size:13px}
-
-/* ===== SLEEP ===== */
-.sleepInput{
-  width:60px;
-  margin-left:6px;
-}
-.sleepStats{
-  background:#f7f7f7;
-  padding:10px;
-  border-radius:10px;
-  margin-top:15px;
+.weekTask{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  font-size:13px;
 }
 </style>
 
@@ -106,12 +154,9 @@ th{background:#f7f7f7}
   <div class="tableWrapper">
     <table id="table"></table>
   </div>
-
   <div class="chartWrapper">
     <canvas id="monthChart"></canvas>
   </div>
-
-  <div class="sleepStats" id="sleepStats"></div>
 </div>
 
 <!-- ===== WOCHE ===== -->
@@ -146,33 +191,40 @@ const auth=getAuth(app);
 const db=getFirestore(app);
 const provider=new GoogleAuthProvider();
 
+/* ================= LOGIN ================= */
 loginBtn.onclick=()=>signInWithPopup(auth,provider);
 logoutBtn.onclick=()=>signOut(auth);
 
 /* ================= DATA ================= */
-let data={habits:{},logs:{},sleep:{}};
+let data={habits:{},logs:{}};
 let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
-let currentWeekOffset=0;
 let chart;
+let currentWeekOffset=0;
 
 const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
 const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-const SLEEP_GOAL=8;
 
 /* ================= AUTH ================= */
 onAuthStateChanged(auth,async user=>{
-  if(!user){userStatus.textContent="Nicht eingeloggt";return;}
+  if(!user){
+    userStatus.textContent="Nicht eingeloggt";
+    return;
+  }
   userStatus.textContent="Eingeloggt als: "+user.email;
   const snap=await getDoc(doc(db,"users",user.uid));
   if(snap.exists()) data=snap.data();
   else await setDoc(doc(db,"users",user.uid),data);
-  renderMonth();renderWeek();
+  renderMonth();
+  renderWeek();
 });
 
 /* ================= HELPERS ================= */
 function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
-async function save(){if(auth.currentUser)await setDoc(doc(db,"users",auth.currentUser.uid),data);}
+async function save(){
+  if(!auth.currentUser) return;
+  await setDoc(doc(db,"users",auth.currentUser.uid),data);
+}
 
 /* ================= INIT ================= */
 for(let y=currentYear-3;y<=currentYear+3;y++){
@@ -200,56 +252,61 @@ monthNames.forEach((m,i)=>{
 window.addHabit=()=>{
   let n=habitInput.value.trim();
   if(!n||data.habits[n])return;
-  data.habits[n]=30;
-  habitInput.value="";
+  data.habits[n]=parseInt(goalInput.value)||30;
+  habitInput.value="";goalInput.value="";
+  save();renderMonth();renderWeek();
+};
+window.deleteHabit=(n)=>{
+  if(!confirm("Löschen?"))return;
+  delete data.habits[n];
+  for(let y in data.logs)for(let m in data.logs[y])delete data.logs[y][m][n];
+  save();renderMonth();renderWeek();
+};
+window.toggle=(h,i)=>{
+  data.logs[currentYear]??={};
+  data.logs[currentYear][currentMonth]??={};
+  data.logs[currentYear][currentMonth][h][i]=!data.logs[currentYear][currentMonth][h][i];
   save();renderMonth();renderWeek();
 };
 
-window.toggleSleep=(y,m,d)=>{
-  let val=parseFloat(prompt("Wie viele Stunden geschlafen?", "8"));
-  if(isNaN(val))return;
-  data.sleep[y]??={};
-  data.sleep[y][m]??={};
-  data.sleep[y][m][d]=val;
-  save();renderMonth();renderWeek();
-};
-
-/* ================= MONTH ================= */
+/* ================= MONAT ================= */
 function renderMonth(){
   const days=daysInMonth(currentYear,currentMonth);
-  data.sleep[currentYear]??={};
-  data.sleep[currentYear][currentMonth]??={};
+  const weeks=Math.ceil(days/7);
 
-  let arr=[];
-  for(let d=0;d<days;d++){
-    if(data.sleep[currentYear][currentMonth][d]!=null)
-      arr.push(data.sleep[currentYear][currentMonth][d]);
+  data.logs[currentYear]??={};
+  data.logs[currentYear][currentMonth]??={};
+  for(let h in data.habits)
+    data.logs[currentYear][currentMonth][h]??=Array(days).fill(false);
+
+  table.innerHTML="";
+  let h1=`<tr><th rowspan="2">Habit</th><th rowspan="2">%</th><th rowspan="2">✖</th>`;
+  for(let w=1;w<=weeks;w++)h1+=`<th colspan="7">Woche ${w}</th>`;
+  h1+="</tr>";
+
+  let h2="<tr>";
+  for(let i=0;i<weeks*7;i++){
+    let d=i+1<=days?i+1:"";
+    let wd=i<days?weekDays[(new Date(currentYear,currentMonth,i+1).getDay()+6)%7]:"";
+    h2+=`<th>${wd}<br>${d}</th>`;
   }
+  h2+="</tr>";
+  table.innerHTML+=h1+h2;
 
-  let avg=arr.length?(arr.reduce((a,b)=>a+b)/arr.length).toFixed(1):"-";
-  let good=arr.filter(v=>v>=SLEEP_GOAL).length;
-
-  sleepStats.innerHTML=`
-    <b>Schlaf-Statistik</b><br>
-    Ø Schlaf: ${avg}h<br>
-    Nächte ≥ ${SLEEP_GOAL}h: ${good}
-  `;
-
-  let labels=Array.from({length:days},(_,i)=>i+1);
-  let dataArr=labels.map(i=>data.sleep[currentYear][currentMonth][i-1]??null);
-
-  if(chart)chart.destroy();
-  chart=new Chart(monthChart,{
-    type:"line",
-    data:{
-      labels,
-      datasets:[
-        {label:"Schlaf",data:dataArr,borderColor:"#6fa85c"},
-        {label:"Ziel",data:Array(days).fill(SLEEP_GOAL),borderDash:[5,5]}
-      ]
-    },
-    options:{scales:{y:{min:0,max:10}}}
-  });
+  let habits=data.logs[currentYear][currentMonth];
+  for(let h in habits){
+    let done=habits[h].filter(v=>v).length;
+    let p=Math.round(done/data.habits[h]*100)||0;
+    let row=`<tr><td class="habit">${h}<div class="progress"><div style="width:${p}%"></div></div></td>
+      <td>${p}%</td><td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
+    for(let i=0;i<weeks*7;i++){
+      if(i<days)row+=`<td><input type="checkbox" ${habits[h][i]?"checked":""} onclick="toggle('${h}',${i})"></td>`;
+      else row+=`<td class="empty"></td>`;
+    }
+    row+="</tr>";
+    table.innerHTML+=row;
+  }
+  renderChart(habits,days);
 }
 
 /* ================= WEEK ================= */
@@ -261,22 +318,42 @@ function renderWeek(){
   for(let d=0;d<7;d++){
     let date=new Date(start);
     date.setDate(start.getDate()+d);
+
     let y=date.getFullYear(),m=date.getMonth(),i=date.getDate()-1;
-    let h=data.sleep[y]?.[m]?.[i];
-    let p=h?Math.min(100,Math.round(h/SLEEP_GOAL*100)):0;
+    data.logs[y]??={};
+    data.logs[y][m]??={};
+
+    let habits=data.logs[y][m];
+    let names=Object.keys(data.habits);
+    let done=0;
+    names.forEach(h=>{if(habits[h]?.[i])done++;});
+    let p=names.length?Math.round(done/names.length*100):0;
 
     let card=document.createElement("div");
     card.className="weekCard";
-    card.innerHTML=`
-      <h4>${weekDays[d]}</h4>
-      <div class="circle" style="--deg:${p*3.6}deg">${h?h+"h":"–"}</div>
-      <button onclick="toggleSleep(${y},${m},${i})">😴 Schlaf eintragen</button>
-    `;
+    card.innerHTML=`<h4>${weekDays[d]}</h4><small>${date.toLocaleDateString()}</small>
+      <div class="circle" style="--deg:${p*3.6}deg">${p}%</div>`;
+    names.forEach(h=>{
+      habits[h]??=Array(daysInMonth(y,m)).fill(false);
+      card.innerHTML+=`<div class="weekTask">
+        <input type="checkbox" ${habits[h][i]?"checked":""} onchange="toggle('${h}',${i})">
+        <span>${h}</span></div>`;
+    });
     weekCards.appendChild(card);
   }
 }
-
 window.changeWeek=(d)=>{currentWeekOffset+=d;renderWeek();};
+
+/* ================= CHART ================= */
+function renderChart(habits,days){
+  let done=Array(days).fill(0),tot=Array(days).fill(0);
+  for(let h in habits)habits[h].forEach((v,i)=>{tot[i]++;if(v)done[i]++;});
+  let perc=done.map((v,i)=>tot[i]?Math.round(v/tot[i]*100):0);
+  if(chart)chart.destroy();
+  chart=new Chart(monthChart,{type:"line",data:{labels:[...Array(days).keys()].map(i=>i+1),
+    datasets:[{data:perc,fill:true,tension:.3}]},
+    options:{responsive:true,scales:{y:{min:0,max:100}},plugins:{legend:{display:false}}}});
+}
 
 /* ===== VIEW SWITCH ===== */
 monthTab.onclick=()=>{
@@ -294,9 +371,7 @@ weekTab.onclick=()=>{
 };
 </script>
 </body>
-</html>
-
-
+</html> 
 
 
 
