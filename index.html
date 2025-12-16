@@ -154,7 +154,9 @@ th{background:#f7f7f7}
 <div class="tabs">
   <button id="monthTab" class="active">Monat</button>
   <button id="weekTab">Woche</button>
+  <button id="statsTab">Statistik</button>
 </div>
+
 
 <b>Jahr:</b>
 <select id="yearSelect"></select>
@@ -180,6 +182,17 @@ th{background:#f7f7f7}
 
 <!-- ===== WOCHE ===== -->
 <div id="weekView">
+  <!-- ===== STATISTIK ===== -->
+<div id="statsView" style="display:none">
+  <h3>😴 Schlaf-Statistik</h3>
+
+  <p><b>Ø Schlaf:</b> <span id="avgSleep">–</span> h</p>
+  <p><b>Schlafziel (8h) verfehlt um:</b> <span id="sleepDeficit">–</span> h</p>
+  <p><b>Nächte ≥ 8h:</b> <span id="goalNights">–</span></p>
+
+  <canvas id="sleepChart" style="margin-top:20px"></canvas>
+</div>
+
   <div class="weekNav">
     <button onclick="changeWeek(-1)">← Woche</button>
     <button onclick="currentWeekOffset=0;renderWeek()">Aktuelle Woche</button>
@@ -251,6 +264,59 @@ onAuthStateChanged(auth,async user=>{
 });
 
 /* ================= HELPERS ================= */
+  function renderSleepStats(){
+  let arr = [];
+
+  for(let y in data.sleep){
+    for(let m in data.sleep[y]){
+      for(let d in data.sleep[y][m]){
+        arr.push(data.sleep[y][m][d]);
+      }
+    }
+  }
+
+  if(arr.length === 0){
+    avgSleep.textContent = "–";
+    sleepDeficit.textContent = "–";
+    goalNights.textContent = "–";
+    return;
+  }
+
+  const TARGET = 8;
+
+  // Ø Schlaf
+  let avg = arr.reduce((a,b)=>a+b,0) / arr.length;
+  avgSleep.textContent = avg.toFixed(1);
+
+  // Fehlende Stunden
+  let deficit = arr
+    .map(h => Math.max(0, TARGET - h))
+    .reduce((a,b)=>a+b,0);
+
+  sleepDeficit.textContent = deficit.toFixed(1);
+
+  // Zielnächte
+  goalNights.textContent = arr.filter(h=>h>=TARGET).length;
+
+  // Chart
+  if(window.sleepChart) window.sleepChart.destroy();
+  window.sleepChart = new Chart(sleepChart,{
+    type:"line",
+    data:{
+      labels: arr.map((_,i)=>i+1),
+      datasets:[{
+        data: arr,
+        borderWidth:2,
+        tension:.3
+      }]
+    },
+    options:{
+      scales:{y:{min:0,max:12}},
+      plugins:{legend:{display:false}}
+    }
+  });
+}
+
 function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
 async function save(){
   if(!auth.currentUser) return;
@@ -426,6 +492,18 @@ monthTab.onclick=()=>{
   monthView.style.display="block";
   weekView.style.display="none";
 };
+  statsTab.onclick=()=>{
+  statsTab.classList.add("active");
+  monthTab.classList.remove("active");
+  weekTab.classList.remove("active");
+
+  monthView.style.display="none";
+  weekView.style.display="none";
+  statsView.style.display="block";
+
+  renderSleepStats();
+};
+
 weekTab.onclick=()=>{
   weekTab.classList.add("active");
   monthTab.classList.remove("active");
@@ -436,6 +514,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
