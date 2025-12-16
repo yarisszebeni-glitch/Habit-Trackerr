@@ -182,23 +182,21 @@ th{background:#f7f7f7}
 
 <!-- ===== WOCHE ===== -->
 <div id="weekView">
-  <!-- ===== STATISTIK ===== -->
-<div id="statsView" style="display:none">
-  <h3>😴 Schlaf-Statistik</h3>
-
-  <p><b>Ø Schlaf:</b> <span id="avgSleep">–</span> h</p>
-  <p><b>Schlafziel (8h) verfehlt um:</b> <span id="sleepDeficit">–</span> h</p>
-  <p><b>Nächte ≥ 8h:</b> <span id="goalNights">–</span></p>
-
-  <canvas id="sleepChart" style="margin-top:20px"></canvas>
-</div>
-
   <div class="weekNav">
     <button onclick="changeWeek(-1)">← Woche</button>
     <button onclick="currentWeekOffset=0;renderWeek()">Aktuelle Woche</button>
     <button onclick="changeWeek(1)">Woche →</button>
   </div>
   <div class="weekCards" id="weekCards"></div>
+</div>
+<!-- ===== STATISTIK ===== -->
+<div id="statsView" style="display:none">
+  <h3>😴 Schlaf-Statistik</h3>
+
+  <p><b>Ø Schlafdauer:</b> <span id="avgSleep">–</span> h</p>
+  <p><b>Nächte ≥ 8h:</b> <span id="goalNights">–</span></p>
+
+  <canvas id="sleepChart" style="margin-top:20px;max-width:100%"></canvas>
 </div>
 
 </div>
@@ -524,6 +522,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
