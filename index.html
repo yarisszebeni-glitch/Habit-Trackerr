@@ -20,73 +20,53 @@ body{
   padding:20px;
 }
 
-/* ===== TOP ===== */
-#userStatus{font-weight:bold;margin-bottom:10px}
-
-/* ===== VIEW SWITCH ===== */
-.viewSwitch{
-  display:flex;
-  gap:8px;
-  margin-bottom:15px;
-}
-.viewSwitch button{
-  border:none;
-  padding:8px 14px;
-  border-radius:8px;
-  cursor:pointer;
-  background:#ddd;
-}
-.viewSwitch button.active{
-  background:#6fa85c;
-  color:#fff;
-}
-
-/* ===== WEEK VIEW ===== */
-.weekHeader{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-}
-.weekGrid{
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:8px;
-}
-.dayCard{
-  background:#fafafa;
-  border-radius:10px;
-  padding:10px;
-  text-align:center;
-}
-.dayName{font-weight:bold;margin-bottom:4px}
-.sleepIcon{font-size:26px;cursor:pointer}
-.sleepHours{font-size:14px;margin-top:4px}
-
-/* colors */
-.red{background:#ffd6d6}
-.yellow{background:#fff3c4}
-.green{background:#d9f5d9}
-
-/* ===== MONTH VIEW ===== */
+/* ===== TABS ===== */
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.tabs button{padding:6px 10px;border-radius:6px;border:none;background:#ddd}
+.tabs button{padding:6px 10px;border-radius:6px;border:none;background:#ddd;cursor:pointer}
 .tabs button.active{background:#6fa85c;color:#fff}
 
+/* ===== TABLE ===== */
 .tableWrapper{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:900px;font-size:12px}
+table{border-collapse:collapse;width:100%;font-size:12px;min-width:900px}
 th,td{border:1px solid #ddd;padding:4px;text-align:center}
 th{background:#f7f7f7}
 .habit{text-align:left;font-weight:bold}
-
+.delete{color:red;cursor:pointer}
 .progress{height:8px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:4px}
 .progress div{height:100%;background:#6fa85c}
+.empty{background:#fafafa}
 
 /* ===== CHART ===== */
-.chartWrapper{height:300px;margin-top:30px}
+.chartWrapper{height:300px;margin-top:20px}
 
-@media(max-width:768px){
-  .chartWrapper{height:220px}
+/* ===== WEEK VIEW ===== */
+#weekView{display:none}
+.weekNav{display:flex;justify-content:space-between;margin:10px 0}
+.weekCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.weekCard{
+  background:#6fa85c;
+  color:white;
+  border-radius:12px;
+  padding:12px;
+}
+.circle{
+  width:80px;height:80px;border-radius:50%;
+  background:conic-gradient(#fff var(--deg),rgba(255,255,255,.3) 0);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:bold;color:#2f5d25;margin:8px auto;
+}
+.weekTask{display:flex;gap:6px;align-items:center;font-size:13px}
+
+/* ===== SLEEP ===== */
+.sleepInput{
+  width:60px;
+  margin-left:6px;
+}
+.sleepStats{
+  background:#f7f7f7;
+  padding:10px;
+  border-radius:10px;
+  margin-top:15px;
 }
 </style>
 
@@ -97,32 +77,21 @@ th{background:#f7f7f7}
 <div class="container">
 
 <h2>Habit Tracker</h2>
+
 <div id="userStatus">Nicht eingeloggt</div>
-<button id="loginBtn">Login</button>
+<button id="loginBtn">Login mit Google</button>
 <button id="logoutBtn">Logout</button>
 
 <hr>
 
-<div class="viewSwitch">
-  <button id="weekBtn" class="active">Wochenansicht 😴</button>
-  <button id="monthBtn">Monatsansicht 📅</button>
+<div class="tabs">
+  <button id="monthTab" class="active">Monat</button>
+  <button id="weekTab">Woche</button>
 </div>
-
-<!-- ===== WEEK VIEW ===== -->
-<div id="weekView">
-  <div class="weekHeader">
-    <button onclick="changeWeek(-1)">⬅️</button>
-    <b id="weekLabel"></b>
-    <button onclick="changeWeek(1)">➡️</button>
-  </div>
-  <div class="weekGrid" id="weekGrid"></div>
-</div>
-
-<!-- ===== MONTH VIEW ===== -->
-<div id="monthView" style="display:none">
 
 <b>Jahr:</b>
 <select id="yearSelect"></select>
+
 <div class="tabs" id="months"></div>
 
 <br>
@@ -131,112 +100,196 @@ th{background:#f7f7f7}
 <button onclick="addHabit()">Hinzufügen</button>
 
 <br><br>
-<div class="tableWrapper">
-  <table id="table"></table>
+
+<!-- ===== MONAT ===== -->
+<div id="monthView">
+  <div class="tableWrapper">
+    <table id="table"></table>
+  </div>
+
+  <div class="chartWrapper">
+    <canvas id="monthChart"></canvas>
+  </div>
+
+  <div class="sleepStats" id="sleepStats"></div>
 </div>
 
-<div class="chartWrapper">
-  <canvas id="monthChart"></canvas>
+<!-- ===== WOCHE ===== -->
+<div id="weekView">
+  <div class="weekNav">
+    <button onclick="changeWeek(-1)">← Woche</button>
+    <button onclick="currentWeekOffset=0;renderWeek()">Aktuelle Woche</button>
+    <button onclick="changeWeek(1)">Woche →</button>
+  </div>
+  <div class="weekCards" id="weekCards"></div>
 </div>
 
-</div>
 </div>
 
 <script type="module">
-/* ===== FIREBASE ===== */
+/* ================= FIREBASE ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCkWCxlVJGoNbXG7jHQ-KKgRrKtamQb6B0",
-  authDomain: "habit-tracker-71caa.firebaseapp.com",
-  projectId: "habit-tracker-71caa",
-  storageBucket: "habit-tracker-71caa.appspot.com",
-  messagingSenderId: "512623329438",
-  appId: "1:512623329438:web:b678351963b85e17d23b8f"
+const firebaseConfig={
+  apiKey:"AIzaSyCkWCxlVJGoNbXG7jHQ-KKgRrKtamQb6B0",
+  authDomain:"habit-tracker-71caa.firebaseapp.com",
+  projectId:"habit-tracker-71caa",
+  storageBucket:"habit-tracker-71caa.appspot.com",
+  messagingSenderId:"512623329438",
+  appId:"1:512623329438:web:b678351963b85e17d23b8f"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+const provider=new GoogleAuthProvider();
 
-/* ===== DATA ===== */
-let data={habits:{},logs:{},sleep:{}};
-let currentWeekOffset=0;
-const sleepGoal=8;
-
-/* ===== AUTH ===== */
 loginBtn.onclick=()=>signInWithPopup(auth,provider);
 logoutBtn.onclick=()=>signOut(auth);
 
+/* ================= DATA ================= */
+let data={habits:{},logs:{},sleep:{}};
+let currentYear=new Date().getFullYear();
+let currentMonth=new Date().getMonth();
+let currentWeekOffset=0;
+let chart;
+
+const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
+const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const SLEEP_GOAL=8;
+
+/* ================= AUTH ================= */
 onAuthStateChanged(auth,async user=>{
   if(!user){userStatus.textContent="Nicht eingeloggt";return;}
-  userStatus.textContent="Eingeloggt als "+user.email;
+  userStatus.textContent="Eingeloggt als: "+user.email;
   const snap=await getDoc(doc(db,"users",user.uid));
   if(snap.exists()) data=snap.data();
-  else await save();
-  renderWeek();
+  else await setDoc(doc(db,"users",user.uid),data);
+  renderMonth();renderWeek();
 });
 
-/* ===== SAVE ===== */
-async function save(){
-  if(!auth.currentUser)return;
-  await setDoc(doc(db,"users",auth.currentUser.uid),data);
+/* ================= HELPERS ================= */
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
+async function save(){if(auth.currentUser)await setDoc(doc(db,"users",auth.currentUser.uid),data);}
+
+/* ================= INIT ================= */
+for(let y=currentYear-3;y<=currentYear+3;y++){
+  let o=document.createElement("option");
+  o.value=y;o.textContent=y;
+  if(y===currentYear)o.selected=true;
+  yearSelect.appendChild(o);
+}
+yearSelect.onchange=()=>{currentYear=+yearSelect.value;renderMonth();};
+
+monthNames.forEach((m,i)=>{
+  let b=document.createElement("button");
+  b.textContent=m;
+  if(i===currentMonth)b.classList.add("active");
+  b.onclick=()=>{
+    currentMonth=i;
+    document.querySelectorAll("#months button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    renderMonth();
+  };
+  months.appendChild(b);
+});
+
+/* ================= HABITS ================= */
+window.addHabit=()=>{
+  let n=habitInput.value.trim();
+  if(!n||data.habits[n])return;
+  data.habits[n]=30;
+  habitInput.value="";
+  save();renderMonth();renderWeek();
+};
+
+window.toggleSleep=(y,m,d)=>{
+  let val=parseFloat(prompt("Wie viele Stunden geschlafen?", "8"));
+  if(isNaN(val))return;
+  data.sleep[y]??={};
+  data.sleep[y][m]??={};
+  data.sleep[y][m][d]=val;
+  save();renderMonth();renderWeek();
+};
+
+/* ================= MONTH ================= */
+function renderMonth(){
+  const days=daysInMonth(currentYear,currentMonth);
+  data.sleep[currentYear]??={};
+  data.sleep[currentYear][currentMonth]??={};
+
+  let arr=[];
+  for(let d=0;d<days;d++){
+    if(data.sleep[currentYear][currentMonth][d]!=null)
+      arr.push(data.sleep[currentYear][currentMonth][d]);
+  }
+
+  let avg=arr.length?(arr.reduce((a,b)=>a+b)/arr.length).toFixed(1):"-";
+  let good=arr.filter(v=>v>=SLEEP_GOAL).length;
+
+  sleepStats.innerHTML=`
+    <b>Schlaf-Statistik</b><br>
+    Ø Schlaf: ${avg}h<br>
+    Nächte ≥ ${SLEEP_GOAL}h: ${good}
+  `;
+
+  let labels=Array.from({length:days},(_,i)=>i+1);
+  let dataArr=labels.map(i=>data.sleep[currentYear][currentMonth][i-1]??null);
+
+  if(chart)chart.destroy();
+  chart=new Chart(monthChart,{
+    type:"line",
+    data:{
+      labels,
+      datasets:[
+        {label:"Schlaf",data:dataArr,borderColor:"#6fa85c"},
+        {label:"Ziel",data:Array(days).fill(SLEEP_GOAL),borderDash:[5,5]}
+      ]
+    },
+    options:{scales:{y:{min:0,max:10}}}
+  });
 }
 
-/* ===== VIEW SWITCH ===== */
-weekBtn.onclick=()=>{
-  weekBtn.classList.add("active");
-  monthBtn.classList.remove("active");
-  weekView.style.display="block";
-  monthView.style.display="none";
-};
-monthBtn.onclick=()=>{
-  monthBtn.classList.add("active");
-  weekBtn.classList.remove("active");
-  monthView.style.display="block";
-  weekView.style.display="none";
-};
-
-/* ===== WEEK LOGIC ===== */
-function changeWeek(dir){
-  currentWeekOffset+=dir;
-  renderWeek();
-}
-
+/* ================= WEEK ================= */
 function renderWeek(){
-  weekGrid.innerHTML="";
+  weekCards.innerHTML="";
   const start=new Date();
-  start.setDate(start.getDate()-start.getDay()+1+currentWeekOffset*7);
+  start.setDate(start.getDate()-start.getDay()+1+(currentWeekOffset*7));
 
-  weekLabel.textContent=`${start.toLocaleDateString()}`;
+  for(let d=0;d<7;d++){
+    let date=new Date(start);
+    date.setDate(start.getDate()+d);
+    let y=date.getFullYear(),m=date.getMonth(),i=date.getDate()-1;
+    let h=data.sleep[y]?.[m]?.[i];
+    let p=h?Math.min(100,Math.round(h/SLEEP_GOAL*100)):0;
 
-  for(let i=0;i<7;i++){
-    const d=new Date(start);
-    d.setDate(start.getDate()+i);
-    const key=d.toISOString().slice(0,10);
-
-    data.sleep[key] ??= {hours:0};
-
-    const h=data.sleep[key].hours;
-    let cls=h>=sleepGoal?"green":h>=6?"yellow":h>0?"red":"";
-
-    weekGrid.innerHTML+=`
-      <div class="dayCard ${cls}">
-        <div class="dayName">${d.toLocaleDateString("de",{weekday:"short"})}</div>
-        <div class="sleepIcon" onclick="setSleep('${key}')">😴</div>
-        <div class="sleepHours">${h?h+" h":"-"}</div>
-      </div>`;
+    let card=document.createElement("div");
+    card.className="weekCard";
+    card.innerHTML=`
+      <h4>${weekDays[d]}</h4>
+      <div class="circle" style="--deg:${p*3.6}deg">${h?h+"h":"–"}</div>
+      <button onclick="toggleSleep(${y},${m},${i})">😴 Schlaf eintragen</button>
+    `;
+    weekCards.appendChild(card);
   }
 }
 
-window.setSleep=(key)=>{
-  const h=parseFloat(prompt("Schlafstunden eingeben:","8"));
-  if(isNaN(h))return;
-  data.sleep[key]={hours:h};
-  save();
+window.changeWeek=(d)=>{currentWeekOffset+=d;renderWeek();};
+
+/* ===== VIEW SWITCH ===== */
+monthTab.onclick=()=>{
+  monthTab.classList.add("active");
+  weekTab.classList.remove("active");
+  monthView.style.display="block";
+  weekView.style.display="none";
+};
+weekTab.onclick=()=>{
+  weekTab.classList.add("active");
+  monthTab.classList.remove("active");
+  monthView.style.display="none";
+  weekView.style.display="block";
   renderWeek();
 };
 </script>
