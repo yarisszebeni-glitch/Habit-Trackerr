@@ -116,6 +116,25 @@ th{background:#f7f7f7}
   align-items:center;
   font-size:13px;
 }
+  .statBtn{
+  position:absolute;
+  top:10px;
+  right:10px;
+  border:none;
+  background:white;
+  color:#2f5d25;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:12px;
+  padding:3px 6px;
+}
+.sleepInfo{
+  margin-top:6px;
+  font-size:12px;
+  opacity:.9;
+}
+.weekCard{position:relative}
+
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -196,7 +215,12 @@ loginBtn.onclick=()=>signInWithPopup(auth,provider);
 logoutBtn.onclick=()=>signOut(auth);
 
 /* ================= DATA ================= */
-let data={habits:{},logs:{}};
+let data={
+  habits:{},
+  logs:{},
+  sleep:{}   // 👈 NEU
+};
+
 let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
 let chart;
@@ -320,6 +344,10 @@ function renderWeek(){
     date.setDate(start.getDate()+d);
 
     let y=date.getFullYear(),m=date.getMonth(),i=date.getDate()-1;
+    data.sleep[y] ??= {};
+data.sleep[y][m] ??= {};
+let sleepVal=data.sleep[y][m][i];
+
     data.logs[y]??={};
     data.logs[y][m]??={};
 
@@ -331,8 +359,14 @@ function renderWeek(){
 
     let card=document.createElement("div");
     card.className="weekCard";
-    card.innerHTML=`<h4>${weekDays[d]}</h4><small>${date.toLocaleDateString()}</small>
-      <div class="circle" style="--deg:${p*3.6}deg">${p}%</div>`;
+    card.innerHTML=`
+  <button class="statBtn" onclick="editSleep(${y},${m},${i})">📊</button>
+  <h4>${weekDays[d]}</h4>
+  <small>${date.toLocaleDateString()}</small>
+  <div class="circle" style="--deg:${p*3.6}deg">${p}%</div>
+  <div class="sleepInfo">😴 ${sleepVal ?? "–"} h</div>
+`;
+
     names.forEach(h=>{
       habits[h]??=Array(daysInMonth(y,m)).fill(false);
       card.innerHTML+=`<div class="weekTask">
@@ -343,6 +377,24 @@ function renderWeek(){
   }
 }
 window.changeWeek=(d)=>{currentWeekOffset+=d;renderWeek();};
+  window.editSleep=(y,m,d)=>{
+  let val=prompt("Wie viele Stunden hast du geschlafen? (z. B. 7.5)");
+  if(val===null) return;
+
+  let num=parseFloat(val);
+  if(isNaN(num)||num<0||num>24){
+    alert("Ungültige Eingabe");
+    return;
+  }
+
+  data.sleep[y] ??= {};
+  data.sleep[y][m] ??= {};
+  data.sleep[y][m][d]=num;
+
+  save();
+  renderWeek();
+};
+
 
 /* ================= CHART ================= */
 function renderChart(habits,days){
@@ -372,6 +424,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
