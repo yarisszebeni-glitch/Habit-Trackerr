@@ -59,10 +59,20 @@ th{background:#f7f7f7}
 <script type="module">
 /* ================= FIREBASE ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkWCxlVJGoNbXG7jHQ-KKgRrKtamQb6B0",
@@ -78,33 +88,45 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-/* ================= LOGIN ================= */
-window.login = async ()=> await signInWithPopup(auth, provider);
-window.logout = async ()=> await signOut(auth);
-
-/* ================= DATEN ================= */
-window.data = { habits:{}, logs:{} };
-
-/* ================= SAVE ================= */
-window.save = async function(){
-  if(!auth.currentUser) return;
-  await setDoc(doc(db,"users",auth.currentUser.uid), data);
+/* ================= LOGIN (iOS-SICHER) ================= */
+window.login = () => {
+  signInWithRedirect(auth, provider);
 };
 
-/* ================= LOAD ================= */
+window.logout = async () => {
+  await signOut(auth);
+};
+
+/* ================= DATEN ================= */
+let data = { habits:{}, logs:{} };
+
+/* ================= SAVE ================= */
+async function save(){
+  if(!auth.currentUser) return;
+  await setDoc(doc(db,"users",auth.currentUser.uid), data);
+}
+
+/* ================= AUTH STATE ================= */
 onAuthStateChanged(auth, async user=>{
   if(!user){
     userStatus.textContent="Nicht eingeloggt";
     return;
   }
+
   userStatus.textContent="Eingeloggt als: "+user.email;
+
   const snap = await getDoc(doc(db,"users",user.uid));
   if(snap.exists()){
     data = snap.data();
-    render();
   } else {
-    save();
+    await save();
   }
+  render();
+});
+
+/* ================= REDIRECT RESULT (WICHTIG FÜR iOS) ================= */
+getRedirectResult(auth).catch(err=>{
+  console.warn("Redirect Info:", err.message);
 });
 
 /* ================= BASIS ================= */
