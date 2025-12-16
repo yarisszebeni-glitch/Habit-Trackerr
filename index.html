@@ -1,369 +1,254 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<title>Habit Tracker</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Habit Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<style>
-body{
-  font-family:Arial;
-  background:#f2f2f2;
-  margin:0;
-  padding:20px;
-  overflow-x:hidden;
-}
-.container{
-  max-width:1200px;
-  margin:auto;
-  background:#fff;
-  border-radius:12px;
-  padding:20px;
-}
+  <!-- React -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 
-.tabs{
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-  margin-bottom:10px;
-}
-.tabs button{
-  padding:6px 10px;
-  border-radius:6px;
-  border:none;
-  background:#ddd;
-  cursor:pointer;
-}
-.tabs button.active{
-  background:#6fa85c;
-  color:#fff;
-}
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f5f5f5;
+    }
 
-.tableWrapper{
-  overflow-x:auto;
-}
+    .toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
 
-table{
-  border-collapse:collapse;
-  width:100%;
-  font-size:12px;
-  min-width:900px;
-}
-th,td{
-  border:1px solid #ddd;
-  padding:4px;
-  text-align:center;
-}
-th{
-  background:#f7f7f7;
-}
-.habit{
-  text-align:left;
-  font-weight:bold;
-}
-.delete{
-  color:red;
-  cursor:pointer;
-}
+    .toggle button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #ddd;
+      font-weight: 600;
+    }
 
-.progress{
-  height:8px;
-  background:#ddd;
-  border-radius:6px;
-  overflow:hidden;
-  margin-top:4px;
-}
-.progress div{
-  height:100%;
-  background:#6fa85c;
-}
+    .toggle .active {
+      background: #4caf50;
+      color: white;
+    }
 
-#userStatus{
-  margin-bottom:10px;
-  font-weight:bold;
-}
+    .week {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(120px, 1fr));
+      gap: 12px;
+      overflow-x: auto;
+    }
 
-.empty{
-  background:#fafafa;
-}
+    .day {
+      background: white;
+      border-radius: 12px;
+      padding: 10px;
+      min-width: 120px;
+    }
 
-/* ===== CHART FIX ===== */
-.chartWrapper{
-  height:320px;
-  margin-top:30px;
-}
-@media(max-width:768px){
-  .chartWrapper{
-    height:220px;
-  }
-}
-</style>
+    .day h4 {
+      margin: 0 0 6px;
+      text-align: center;
+    }
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    .progress {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 10px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      background: conic-gradient(
+        #4caf50 var(--percent),
+        #ddd 0
+      );
+    }
+
+    .progress span {
+      background: white;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .habit {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .month {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+
+    .month-day {
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .dot {
+      margin-top: 6px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @media (max-width: 600px) {
+      .week {
+        grid-template-columns: repeat(7, 140px);
+      }
+    }
+  </style>
 </head>
 
 <body>
-<div class="container">
+  <div id="root"></div>
 
-<h2>Habit Tracker</h2>
+  <script type="text/babel">
+    const { useState } = React;
 
-<div id="userStatus">Nicht eingeloggt</div>
-<button id="loginBtn">Login mit Google</button>
-<button id="logoutBtn">Logout</button>
+    const habitNames = ["Sport", "Lesen", "Meditation"];
 
-<hr>
+    function createWeek() {
+      const today = new Date();
+      const start = new Date(today);
+      start.setDate(today.getDate() - today.getDay() + 1);
 
-<b>Jahr:</b>
-<select id="yearSelect"></select>
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
 
-<div class="tabs" id="months"></div>
-
-<br>
-<input id="habitInput" placeholder="Neuer Habit">
-<input id="goalInput" type="number" placeholder="Ziel (Tage)">
-<button onclick="addHabit()">Hinzufügen</button>
-
-<br><br>
-
-<div class="tableWrapper">
-  <table id="table"></table>
-</div>
-
-<div class="chartWrapper">
-  <canvas id="monthChart"></canvas>
-</div>
-
-</div>
-
-<script type="module">
-/* ================= FIREBASE ================= */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  onAuthStateChanged,
-  signOut,
-  setPersistence,
-  browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCkWCxlVJGoNbXG7jHQ-KKgRrKtamQb6B0",
-  authDomain: "habit-tracker-71caa.firebaseapp.com",
-  projectId: "habit-tracker-71caa",
-  storageBucket: "habit-tracker-71caa.appspot.com",
-  messagingSenderId: "512623329438",
-  appId: "1:512623329438:web:b678351963b85e17d23b8f"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
-
-setPersistence(auth, browserLocalPersistence);
-
-/* ================= LOGIN ================= */
-loginBtn.onclick = async () => {
-  try{
-    await signInWithPopup(auth, provider);
-  }catch(e){
-    alert("Login fehlgeschlagen: "+e.message);
-  }
-};
-logoutBtn.onclick = () => signOut(auth);
-
-/* ================= DATEN ================= */
-let data={habits:{},logs:{}};
-let currentYear=new Date().getFullYear();
-let currentMonth=new Date().getMonth();
-let chart;
-
-/* ================= AUTH ================= */
-onAuthStateChanged(auth, async user=>{
-  if(!user){
-    userStatus.textContent="Nicht eingeloggt";
-    table.innerHTML="";
-    data={habits:{},logs:{}};
-    return;
-  }
-  userStatus.textContent="Eingeloggt als: "+user.email;
-  const snap=await getDoc(doc(db,"users",user.uid));
-  if(snap.exists()) data=snap.data();
-  else await setDoc(doc(db,"users",user.uid),data);
-  render();
-});
-
-/* ================= BASIS ================= */
-const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
-const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-
-function daysInMonth(y,m){
-  return new Date(y,m+1,0).getDate();
-}
-
-async function save(){
-  if(!auth.currentUser) return;
-  await setDoc(doc(db,"users",auth.currentUser.uid),data);
-}
-
-/* ================= INIT ================= */
-for(let y=currentYear-3;y<=currentYear+3;y++){
-  let o=document.createElement("option");
-  o.value=y;
-  o.textContent=y;
-  if(y===currentYear) o.selected=true;
-  yearSelect.appendChild(o);
-}
-yearSelect.onchange=()=>{
-  currentYear=+yearSelect.value;
-  render();
-};
-
-monthNames.forEach((m,i)=>{
-  let b=document.createElement("button");
-  b.textContent=m;
-  if(i===currentMonth) b.classList.add("active");
-  b.onclick=()=>{
-    currentMonth=i;
-    document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
-    b.classList.add("active");
-    render();
-  };
-  months.appendChild(b);
-});
-
-/* ================= HABITS ================= */
-window.addHabit=()=>{
-  let name=habitInput.value.trim();
-  if(!name||data.habits[name]) return;
-  data.habits[name]=parseInt(goalInput.value)||30;
-  habitInput.value="";
-  goalInput.value="";
-  save();
-  render();
-};
-
-window.deleteHabit=(name)=>{
-  if(!confirm(`"${name}" löschen?`)) return;
-  delete data.habits[name];
-  for(let y in data.logs){
-    for(let m in data.logs[y]){
-      delete data.logs[y][m][name];
+        return {
+          date: d,
+          habits: habitNames.map(h => ({
+            name: h,
+            done: false
+          }))
+        };
+      });
     }
-  }
-  save();
-  render();
-};
 
-window.toggle=(h,i)=>{
-  data.logs[currentYear][currentMonth][h][i]=
-    !data.logs[currentYear][currentMonth][h][i];
-  save();
-  render();
-};
+    function App() {
+      const [view, setView] = useState("week");
+      const [week, setWeek] = useState(createWeek());
 
-/* ================= RENDER ================= */
-function render(){
-  const days=daysInMonth(currentYear,currentMonth);
-  const weeks=Math.ceil(days/7);
-
-  data.logs[currentYear]??={};
-  data.logs[currentYear][currentMonth]??={};
-
-  for(let h in data.habits){
-    data.logs[currentYear][currentMonth][h] ??= Array(days).fill(false);
-  }
-
-  table.innerHTML="";
-
-  let h1=`<tr>
-    <th rowspan="2">Habit</th>
-    <th rowspan="2">%</th>
-    <th rowspan="2">✖</th>`;
-  for(let w=1;w<=weeks;w++) h1+=`<th colspan="7">Woche ${w}</th>`;
-  h1+="</tr>";
-
-  let h2="<tr>";
-  for(let i=0;i<weeks*7;i++){
-    let day=i+1<=days?i+1:"";
-    let wd=i<days?weekDays[(new Date(currentYear,currentMonth,i+1).getDay()+6)%7]:"";
-    h2+=`<th>${wd}<br>${day}</th>`;
-  }
-  h2+="</tr>";
-
-  table.innerHTML+=h1+h2;
-
-  let habits=data.logs[currentYear][currentMonth];
-
-  for(let h in habits){
-    let done=habits[h].filter(v=>v).length;
-    let p=Math.round(done/data.habits[h]*100)||0;
-
-    let row=`<tr>
-      <td class="habit">${h}
-        <div class="progress"><div style="width:${p}%"></div></div>
-      </td>
-      <td>${p}%</td>
-      <td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
-
-    for(let i=0;i<weeks*7;i++){
-      if(i<days){
-        row+=`<td><input type="checkbox" ${habits[h][i]?"checked":""}
-          onclick="toggle('${h}',${i})"></td>`;
-      }else{
-        row+=`<td class="empty"></td>`;
+      function toggleHabit(dayIndex, habitIndex) {
+        const copy = [...week];
+        copy[dayIndex].habits[habitIndex].done =
+          !copy[dayIndex].habits[habitIndex].done;
+        setWeek(copy);
       }
+
+      function percent(day) {
+        const done = day.habits.filter(h => h.done).length;
+        return Math.round((done / day.habits.length) * 100);
+      }
+
+      return (
+        <>
+          <div className="toggle">
+            <button
+              className={view === "week" ? "active" : ""}
+              onClick={() => setView("week")}
+            >
+              Woche
+            </button>
+            <button
+              className={view === "month" ? "active" : ""}
+              onClick={() => setView("month")}
+            >
+              Monat
+            </button>
+          </div>
+
+          {view === "week" && (
+            <div className="week">
+              {week.map((day, dIndex) => (
+                <div className="day" key={dIndex}>
+                  <h4>
+                    {day.date.toLocaleDateString("de-DE", {
+                      weekday: "short",
+                      day: "numeric"
+                    })}
+                  </h4>
+
+                  <div
+                    className="progress"
+                    style={{ "--percent": percent(day) + "%" }}
+                  >
+                    <span>{percent(day)}%</span>
+                  </div>
+
+                  {day.habits.map((h, hIndex) => (
+                    <label className="habit" key={hIndex}>
+                      <input
+                        type="checkbox"
+                        checked={h.done}
+                        onChange={() =>
+                          toggleHabit(dIndex, hIndex)
+                        }
+                      />
+                      {h.name}
+                    </label>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {view === "month" && (
+            <div className="month">
+              {week.map((day, i) => {
+                const p = percent(day);
+                return (
+                  <div className="month-day" key={i}>
+                    {day.date.getDate()}
+                    <div
+                      className="dot"
+                      style={{
+                        background:
+                          p === 0
+                            ? "#ccc"
+                            : p < 100
+                            ? "#ffc107"
+                            : "#4caf50"
+                      }}
+                    ></div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      );
     }
-    row+="</tr>";
-    table.innerHTML+=row;
-  }
 
-  renderChart(habits,days);
-}
-
-/* ================= CHART ================= */
-function renderChart(habits,days){
-  let doneArr=Array(days).fill(0);
-  let totalArr=Array(days).fill(0);
-
-  for(let h in habits){
-    habits[h].forEach((v,i)=>{
-      totalArr[i]++;
-      if(v) doneArr[i]++;
-    });
-  }
-
-  let perc=doneArr.map((v,i)=>totalArr[i]?Math.round(v/totalArr[i]*100):0);
-
-  if(chart) chart.destroy();
-  chart=new Chart(monthChart,{
-    type:"line",
-    data:{
-      labels:Array.from({length:days},(_,i)=>i+1),
-      datasets:[{
-        data:perc,
-        fill:true,
-        tension:.3
-      }]
-    },
-    options:{
-      responsive:true,
-      scales:{y:{min:0,max:100}},
-      plugins:{legend:{display:false}}
-    }
-  });
-}
-</script>
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
 </body>
 </html>
+
+
 
 
 
