@@ -6,14 +6,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{font-family:Arial;background:#f2f2f2;margin:0;padding:20px}
+body{font-family:Arial;background:#f2f2f2;margin:0;padding:20px;overflow-x:hidden}
 .container{max-width:1200px;margin:auto;background:#fff;border-radius:12px;padding:20px}
 
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tabs button{padding:6px 10px;border-radius:6px;border:none;background:#ddd;cursor:pointer}
 .tabs button.active{background:#6fa85c;color:#fff}
 
-table{border-collapse:collapse;width:100%;font-size:12px}
+table{border-collapse:collapse;width:100%;font-size:12px;min-width:900px}
 th,td{border:1px solid #ddd;padding:4px;text-align:center}
 th{background:#f7f7f7}
 .habit{text-align:left;font-weight:bold}
@@ -24,6 +24,11 @@ th{background:#f7f7f7}
 
 #userStatus{margin-bottom:10px;font-weight:bold}
 .empty{background:#fafafa}
+
+.tableWrapper{overflow-x:auto}
+@media(max-width:768px){
+  canvas{max-height:220px!important}
+}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -35,8 +40,8 @@ th{background:#f7f7f7}
 <h2>Habit Tracker</h2>
 
 <div id="userStatus">Nicht eingeloggt</div>
-<button onclick="login()">Login</button>
-<button onclick="logout()">Logout</button>
+<button id="loginBtn">Login mit Google</button>
+<button id="logoutBtn">Logout</button>
 
 <hr>
 
@@ -51,7 +56,10 @@ th{background:#f7f7f7}
 <button onclick="addHabit()">Hinzufügen</button>
 
 <br><br>
+
+<div class="tableWrapper">
 <table id="table"></table>
+</div>
 
 <canvas id="monthChart" style="margin-top:30px"></canvas>
 
@@ -61,12 +69,19 @@ th{background:#f7f7f7}
 /* ================= FIREBASE ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider,
-  signInWithRedirect, getRedirectResult,
-  signOut, onAuthStateChanged
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut,
+  setPersistence,
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, doc, setDoc, getDoc
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -83,37 +98,56 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-window.login = () => signInWithRedirect(auth, provider);
-window.logout = () => signOut(auth);
+/* 🔒 Login merken */
+setPersistence(auth, browserLocalPersistence);
 
+/* ================= LOGIN BUTTONS ================= */
+loginBtn.onclick = async () => {
+  try{
+    await signInWithPopup(auth, provider);
+  }catch(e){
+    alert("Login fehlgeschlagen: " + e.message);
+  }
+};
+
+logoutBtn.onclick = () => signOut(auth);
+
+/* ================= DATEN ================= */
 let data = { habits:{}, logs:{} };
+let currentYear=new Date().getFullYear();
+let currentMonth=new Date().getMonth();
+let chart;
 
-async function save(){
-  if(!auth.currentUser) return;
-  await setDoc(doc(db,"users",auth.currentUser.uid), data);
-}
-
+/* ================= AUTH STATE ================= */
 onAuthStateChanged(auth, async user=>{
   if(!user){
     userStatus.textContent="Nicht eingeloggt";
+    data={habits:{},logs:{}};
+    table.innerHTML="";
     return;
   }
+
   userStatus.textContent="Eingeloggt als: "+user.email;
+
   const snap = await getDoc(doc(db,"users",user.uid));
   if(snap.exists()) data = snap.data();
-  else await save();
+  else await setDoc(doc(db,"users",user.uid),data);
+
   render();
 });
-
-getRedirectResult(auth).catch(()=>{});
 
 /* ================= BASIS ================= */
 const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
 const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 
-let currentYear=new Date().getFullYear();
-let currentMonth=new Date().getMonth();
-let chart;
+function daysInMonth(y,m){
+  return new Date(y,m+1,0).getDate();
+}
+
+async function save(){
+  if(!auth.currentUser)return;
+  await setDoc(doc(db,"users",auth.currentUser.uid),data);
+}
 
 /* ================= INIT ================= */
 for(let y=currentYear-3;y<=currentYear+3;y++){
@@ -138,7 +172,7 @@ monthNames.forEach((m,i)=>{
 });
 
 /* ================= HABITS ================= */
-window.addHabit=function(){
+window.addHabit=()=>{
   let name=habitInput.value.trim();
   if(!name||data.habits[name])return;
   data.habits[name]=parseInt(goalInput.value)||30;
@@ -146,7 +180,7 @@ window.addHabit=function(){
   save();render();
 };
 
-window.deleteHabit=function(name){
+window.deleteHabit=(name)=>{
   if(!confirm(`"${name}" löschen?`))return;
   delete data.habits[name];
   for(let y in data.logs){
@@ -155,7 +189,7 @@ window.deleteHabit=function(name){
   save();render();
 };
 
-window.toggle=function(h,i){
+window.toggle=(h,i)=>{
   data.logs[currentYear][currentMonth][h][i]=
     !data.logs[currentYear][currentMonth][h][i];
   save();render();
@@ -163,61 +197,47 @@ window.toggle=function(h,i){
 
 /* ================= RENDER ================= */
 function render(){
-  const days = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const weeks = Math.ceil(days / 7);
+  const days=daysInMonth(currentYear,currentMonth);
+  const weeks=Math.ceil(days/7);
 
-  data.logs[currentYear] ??= {};
-  data.logs[currentYear][currentMonth] ??= {};
+  data.logs[currentYear]??={};
+  data.logs[currentYear][currentMonth]??={};
 
   for(let h in data.habits){
-    if(!data.logs[currentYear][currentMonth][h]){
-      data.logs[currentYear][currentMonth][h]=Array(days).fill(false);
-    }
+    data.logs[currentYear][currentMonth][h] ??= Array(days).fill(false);
   }
 
   table.innerHTML="";
 
-  /* ===== HEADER 1: WOCHEN ===== */
-  let h1 = `<tr>
-    <th rowspan="2">Habit</th>
-    <th rowspan="2">%</th>
-    <th rowspan="2">✖</th>`;
+  let h1=`<tr><th rowspan="2">Habit</th><th rowspan="2">%</th><th rowspan="2">✖</th>`;
+  for(let w=1;w<=weeks;w++) h1+=`<th colspan="7">Woche ${w}</th>`;
+  h1+="</tr>";
 
-  for(let w=1;w<=weeks;w++){
-    h1+=`<th colspan="7">Woche ${w}</th>`;
-  }
-  h1+=`</tr>`;
-
-  /* ===== HEADER 2: WOCHENTAGE ===== */
   let h2="<tr>";
   for(let i=0;i<weeks*7;i++){
-    const date = new Date(currentYear, currentMonth, i+1);
-    h2+=`<th>${weekDays[date.getDay()==0?6:date.getDay()-1]}<br>${i+1<=days?i+1:""}</th>`;
+    let day=i+1<=days?i+1:"";
+    let wd=i<days?weekDays[(new Date(currentYear,currentMonth,i+1).getDay()+6)%7]:"";
+    h2+=`<th>${wd}<br>${day}</th>`;
   }
   h2+="</tr>";
 
   table.innerHTML+=h1+h2;
 
-  const habits=data.logs[currentYear][currentMonth];
+  let habits=data.logs[currentYear][currentMonth];
 
   for(let h in habits){
     let done=habits[h].filter(v=>v).length;
-    let goal=data.habits[h];
-    let p=Math.round(done/goal*100)||0;
+    let p=Math.round(done/data.habits[h]*100)||0;
 
     let row=`<tr>
-      <td class="habit">${h}
-        <div class="progress"><div style="width:${p}%"></div></div>
-      </td>
+      <td class="habit">${h}<div class="progress"><div style="width:${p}%"></div></div></td>
       <td>${p}%</td>
       <td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
 
     for(let i=0;i<weeks*7;i++){
       if(i<days){
         row+=`<td><input type="checkbox" ${habits[h][i]?"checked":""} onclick="toggle('${h}',${i})"></td>`;
-      } else {
-        row+=`<td class="empty"></td>`;
-      }
+      }else row+=`<td class="empty"></td>`;
     }
 
     row+="</tr>";
@@ -241,25 +261,18 @@ function renderChart(habits,days){
 
   let perc=doneArr.map((v,i)=>totalArr[i]?Math.round(v/totalArr[i]*100):0);
 
-  if(chart) chart.destroy();
+  if(chart)chart.destroy();
   chart=new Chart(monthChart,{
     type:"line",
-    data:{
-      labels:Array.from({length:days},(_,i)=>i+1),
-      datasets:[{
-        label:"Tages-Erfüllung %",
-        data:perc,
-        fill:true,
-        tension:.3
-      }]
-    },
-    options:{scales:{y:{min:0,max:100}}}
+    data:{labels:Array.from({length:days},(_,i)=>i+1),
+    datasets:[{data:perc,fill:true,tension:.3}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100}},plugins:{legend:{display:false}}}
   });
 }
 </script>
-
 </body>
 </html>
+
 
 
 
