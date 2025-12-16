@@ -196,7 +196,7 @@ loginBtn.onclick=()=>signInWithPopup(auth,provider);
 logoutBtn.onclick=()=>signOut(auth);
 
 /* ================= DATA ================= */
-let data={habits:{},logs:{}};
+let data={habits:{},logs:{},sleep:{}};
 let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
 let chart;
@@ -329,10 +329,24 @@ function renderWeek(){
     names.forEach(h=>{if(habits[h]?.[i])done++;});
     let p=names.length?Math.round(done/names.length*100):0;
 
-    let card=document.createElement("div");
-    card.className="weekCard";
-    card.innerHTML=`<h4>${weekDays[d]}</h4><small>${date.toLocaleDateString()}</small>
-      <div class="circle" style="--deg:${p*3.6}deg">${p}%</div>`;
+    let sleep = getSleep(y,m,i);
+let sp = sleep ? Math.min(100,Math.round(sleep/SLEEP_GOAL*100)) : 0;
+
+let card=document.createElement("div");
+card.className="weekCard";
+card.innerHTML=`
+  <h4>${weekDays[d]}</h4>
+  <small>${date.toLocaleDateString()}</small>
+
+  <div class="circle" style="--deg:${sp*3.6}deg">
+    ${sleep ? `${sleepColor(sleep)} ${sleep}h` : "😴"}
+  </div>
+
+  <button class="sleepBtn" onclick="setSleep(${y},${m},${i})">
+    Schlaf eintragen
+  </button>
+`;
+
     names.forEach(h=>{
       habits[h]??=Array(daysInMonth(y,m)).fill(false);
       card.innerHTML+=`<div class="weekTask">
@@ -369,9 +383,33 @@ weekTab.onclick=()=>{
   weekView.style.display="block";
   renderWeek();
 };
+  /* ================= SLEEP ================= */
+const SLEEP_GOAL = 8;
+
+function getSleep(y,m,d){
+  return data.sleep?.[y]?.[m]?.[d] ?? null;
+}
+
+function setSleep(y,m,d){
+  let h=parseFloat(prompt("Schlafstunden:", "8"));
+  if(isNaN(h)) return;
+  data.sleep[y]??={};
+  data.sleep[y][m]??={};
+  data.sleep[y][m][d]=h;
+  save();
+  renderWeek();
+}
+
+function sleepColor(h){
+  if(h>=8) return "🟢";
+  if(h>=6) return "🟡";
+  return "🔴";
+}
+
 </script>
 </body>
 </html> 
+
 
 
 
