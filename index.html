@@ -191,13 +191,14 @@ th{background:#f7f7f7}
 </div>
 <!-- ===== STATISTIK ===== -->
 <div id="statsView" style="display:none">
-  <h3>😴 Schlaf-Statistik</h3>
+  <h3>😴 Schlaf-Statistik (Woche)</h3>
 
-  <p><b>Ø Schlafdauer:</b> <span id="avgSleep">–</span> h</p>
-  <p><b>Nächte ≥ 8h:</b> <span id="goalNights">–</span></p>
+  <p><b>Ø Schlaf:</b> <span id="avgSleep">–</span> h</p>
+  <p><b>Fehlender Schlaf:</b> <span id="missingSleep">–</span> h</p>
 
-  <canvas id="sleepChart" style="margin-top:20px;max-width:100%"></canvas>
+  <canvas id="sleepChart" style="margin-top:20px"></canvas>
 </div>
+
 
 </div>
 
@@ -522,6 +523,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
