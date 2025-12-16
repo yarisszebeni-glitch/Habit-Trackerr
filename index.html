@@ -344,12 +344,13 @@ function renderWeek(){
     date.setDate(start.getDate()+d);
 
     let y=date.getFullYear(),m=date.getMonth(),i=date.getDate()-1;
+    data.logs[y]??={};
+    data.logs[y][m]??={};
     data.sleep[y] ??= {};
 data.sleep[y][m] ??= {};
 let sleepVal=data.sleep[y][m][i];
 
-    data.logs[y]??={};
-    data.logs[y][m]??={};
+    
 
     let habits=data.logs[y][m];
     let names=Object.keys(data.habits);
@@ -424,6 +425,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
