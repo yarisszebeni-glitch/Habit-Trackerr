@@ -461,14 +461,8 @@ for(let h in data.habits){
     weekCards.appendChild(card);
   }
 }
-window.changeWeek = (d) => {
-  currentWeekOffset += d;
-  renderWeek();
+window.changeWeek=(d)=>{currentWeekOffset+=d;renderWeek();};
 
-  if (document.getElementById("statsView")?.style.display === "block") {
-    renderSleepStats();
-  }
-};
 
   if(typeof renderSleepStats==="function"){
     renderSleepStats();
@@ -544,6 +538,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
