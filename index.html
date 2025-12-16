@@ -461,13 +461,16 @@ for(let h in data.habits){
     weekCards.appendChild(card);
   }
 }
-window.changeWeek=(d)=>{currentWeekOffset+=d;renderWeek();};
+window.changeWeek = (d) => {
+  currentWeekOffset += d;
+  renderWeek();
 
-
-  if(typeof renderSleepStats==="function"){
+  // Falls Statistik offen ist → aktualisieren
+  if(statsView.style.display === "block"){
     renderSleepStats();
   }
 };
+
 
   window.editSleep=(y,m,d)=>{
   let val=prompt("Wie viele Stunden hast du geschlafen? (z. B. 7.5)");
@@ -538,6 +541,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
