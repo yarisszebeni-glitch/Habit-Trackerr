@@ -6,28 +6,96 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{font-family:Arial;background:#f2f2f2;margin:0;padding:20px;overflow-x:hidden}
-.container{max-width:1200px;margin:auto;background:#fff;border-radius:12px;padding:20px}
+body{
+  font-family:Arial;
+  background:#f2f2f2;
+  margin:0;
+  padding:20px;
+  overflow-x:hidden;
+}
+.container{
+  max-width:1200px;
+  margin:auto;
+  background:#fff;
+  border-radius:12px;
+  padding:20px;
+}
 
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.tabs button{padding:6px 10px;border-radius:6px;border:none;background:#ddd;cursor:pointer}
-.tabs button.active{background:#6fa85c;color:#fff}
+.tabs{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+.tabs button{
+  padding:6px 10px;
+  border-radius:6px;
+  border:none;
+  background:#ddd;
+  cursor:pointer;
+}
+.tabs button.active{
+  background:#6fa85c;
+  color:#fff;
+}
 
-table{border-collapse:collapse;width:100%;font-size:12px;min-width:900px}
-th,td{border:1px solid #ddd;padding:4px;text-align:center}
-th{background:#f7f7f7}
-.habit{text-align:left;font-weight:bold}
-.delete{color:red;cursor:pointer}
+.tableWrapper{
+  overflow-x:auto;
+}
 
-.progress{height:8px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:4px}
-.progress div{height:100%;background:#6fa85c}
+table{
+  border-collapse:collapse;
+  width:100%;
+  font-size:12px;
+  min-width:900px;
+}
+th,td{
+  border:1px solid #ddd;
+  padding:4px;
+  text-align:center;
+}
+th{
+  background:#f7f7f7;
+}
+.habit{
+  text-align:left;
+  font-weight:bold;
+}
+.delete{
+  color:red;
+  cursor:pointer;
+}
 
-#userStatus{margin-bottom:10px;font-weight:bold}
-.empty{background:#fafafa}
+.progress{
+  height:8px;
+  background:#ddd;
+  border-radius:6px;
+  overflow:hidden;
+  margin-top:4px;
+}
+.progress div{
+  height:100%;
+  background:#6fa85c;
+}
 
-.tableWrapper{overflow-x:auto}
+#userStatus{
+  margin-bottom:10px;
+  font-weight:bold;
+}
+
+.empty{
+  background:#fafafa;
+}
+
+/* ===== CHART FIX ===== */
+.chartWrapper{
+  height:320px;
+  margin-top:30px;
+}
 @media(max-width:768px){
-  canvas{max-height:220px!important}
+  .chartWrapper{
+    height:220px;
+  }
 }
 </style>
 
@@ -58,10 +126,12 @@ th{background:#f7f7f7}
 <br><br>
 
 <div class="tableWrapper">
-<table id="table"></table>
+  <table id="table"></table>
 </div>
 
-<canvas id="monthChart" style="margin-top:30px"></canvas>
+<div class="chartWrapper">
+  <canvas id="monthChart"></canvas>
+</div>
 
 </div>
 
@@ -98,41 +168,36 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-/* 🔒 Login merken */
 setPersistence(auth, browserLocalPersistence);
 
-/* ================= LOGIN BUTTONS ================= */
+/* ================= LOGIN ================= */
 loginBtn.onclick = async () => {
   try{
     await signInWithPopup(auth, provider);
   }catch(e){
-    alert("Login fehlgeschlagen: " + e.message);
+    alert("Login fehlgeschlagen: "+e.message);
   }
 };
-
 logoutBtn.onclick = () => signOut(auth);
 
 /* ================= DATEN ================= */
-let data = { habits:{}, logs:{} };
+let data={habits:{},logs:{}};
 let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
 let chart;
 
-/* ================= AUTH STATE ================= */
+/* ================= AUTH ================= */
 onAuthStateChanged(auth, async user=>{
   if(!user){
     userStatus.textContent="Nicht eingeloggt";
-    data={habits:{},logs:{}};
     table.innerHTML="";
+    data={habits:{},logs:{}};
     return;
   }
-
   userStatus.textContent="Eingeloggt als: "+user.email;
-
-  const snap = await getDoc(doc(db,"users",user.uid));
-  if(snap.exists()) data = snap.data();
+  const snap=await getDoc(doc(db,"users",user.uid));
+  if(snap.exists()) data=snap.data();
   else await setDoc(doc(db,"users",user.uid),data);
-
   render();
 });
 
@@ -145,23 +210,27 @@ function daysInMonth(y,m){
 }
 
 async function save(){
-  if(!auth.currentUser)return;
+  if(!auth.currentUser) return;
   await setDoc(doc(db,"users",auth.currentUser.uid),data);
 }
 
 /* ================= INIT ================= */
 for(let y=currentYear-3;y<=currentYear+3;y++){
   let o=document.createElement("option");
-  o.value=y;o.textContent=y;
-  if(y===currentYear)o.selected=true;
+  o.value=y;
+  o.textContent=y;
+  if(y===currentYear) o.selected=true;
   yearSelect.appendChild(o);
 }
-yearSelect.onchange=()=>{currentYear=+yearSelect.value;render();};
+yearSelect.onchange=()=>{
+  currentYear=+yearSelect.value;
+  render();
+};
 
 monthNames.forEach((m,i)=>{
   let b=document.createElement("button");
   b.textContent=m;
-  if(i===currentMonth)b.classList.add("active");
+  if(i===currentMonth) b.classList.add("active");
   b.onclick=()=>{
     currentMonth=i;
     document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
@@ -174,25 +243,31 @@ monthNames.forEach((m,i)=>{
 /* ================= HABITS ================= */
 window.addHabit=()=>{
   let name=habitInput.value.trim();
-  if(!name||data.habits[name])return;
+  if(!name||data.habits[name]) return;
   data.habits[name]=parseInt(goalInput.value)||30;
-  habitInput.value="";goalInput.value="";
-  save();render();
+  habitInput.value="";
+  goalInput.value="";
+  save();
+  render();
 };
 
 window.deleteHabit=(name)=>{
-  if(!confirm(`"${name}" löschen?`))return;
+  if(!confirm(`"${name}" löschen?`)) return;
   delete data.habits[name];
   for(let y in data.logs){
-    for(let m in data.logs[y]) delete data.logs[y][m][name];
+    for(let m in data.logs[y]){
+      delete data.logs[y][m][name];
+    }
   }
-  save();render();
+  save();
+  render();
 };
 
 window.toggle=(h,i)=>{
   data.logs[currentYear][currentMonth][h][i]=
     !data.logs[currentYear][currentMonth][h][i];
-  save();render();
+  save();
+  render();
 };
 
 /* ================= RENDER ================= */
@@ -209,7 +284,10 @@ function render(){
 
   table.innerHTML="";
 
-  let h1=`<tr><th rowspan="2">Habit</th><th rowspan="2">%</th><th rowspan="2">✖</th>`;
+  let h1=`<tr>
+    <th rowspan="2">Habit</th>
+    <th rowspan="2">%</th>
+    <th rowspan="2">✖</th>`;
   for(let w=1;w<=weeks;w++) h1+=`<th colspan="7">Woche ${w}</th>`;
   h1+="</tr>";
 
@@ -230,16 +308,20 @@ function render(){
     let p=Math.round(done/data.habits[h]*100)||0;
 
     let row=`<tr>
-      <td class="habit">${h}<div class="progress"><div style="width:${p}%"></div></div></td>
+      <td class="habit">${h}
+        <div class="progress"><div style="width:${p}%"></div></div>
+      </td>
       <td>${p}%</td>
       <td class="delete" onclick="deleteHabit('${h}')">✖</td>`;
 
     for(let i=0;i<weeks*7;i++){
       if(i<days){
-        row+=`<td><input type="checkbox" ${habits[h][i]?"checked":""} onclick="toggle('${h}',${i})"></td>`;
-      }else row+=`<td class="empty"></td>`;
+        row+=`<td><input type="checkbox" ${habits[h][i]?"checked":""}
+          onclick="toggle('${h}',${i})"></td>`;
+      }else{
+        row+=`<td class="empty"></td>`;
+      }
     }
-
     row+="</tr>";
     table.innerHTML+=row;
   }
@@ -261,17 +343,28 @@ function renderChart(habits,days){
 
   let perc=doneArr.map((v,i)=>totalArr[i]?Math.round(v/totalArr[i]*100):0);
 
-  if(chart)chart.destroy();
+  if(chart) chart.destroy();
   chart=new Chart(monthChart,{
     type:"line",
-    data:{labels:Array.from({length:days},(_,i)=>i+1),
-    datasets:[{data:perc,fill:true,tension:.3}]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100}},plugins:{legend:{display:false}}}
+    data:{
+      labels:Array.from({length:days},(_,i)=>i+1),
+      datasets:[{
+        data:perc,
+        fill:true,
+        tension:.3
+      }]
+    },
+    options:{
+      responsive:true,
+      scales:{y:{min:0,max:100}},
+      plugins:{legend:{display:false}}
+    }
   });
 }
 </script>
 </body>
 </html>
+
 
 
 
