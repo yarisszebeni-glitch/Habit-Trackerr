@@ -197,16 +197,14 @@ th{background:#f7f7f7}
   <div class="weekNav">
   <button onclick="changeStats(-1)">←</button>
 
-  <button onclick="statsMode='week';statsOffset=0;renderSleepStats()">
-    Woche
-  </button>
-
-  <button onclick="statsMode='month';statsOffset=0;renderSleepStats()">
-    Monat
-  </button>
+  <button onclick="setStatsMode('week')">Woche</button>
+  <span id="statsTitle"></span>
+  <button onclick="setStatsMode('month')">Monat</button>
 
   <button onclick="changeStats(1)">→</button>
 </div>
+
+  
 
 <div class="weekNav">
   <button onclick="changeStats(-1)">←</button>
@@ -333,22 +331,24 @@ title = `${start.toLocaleDateString()} – ${end.toLocaleDateString()}`;
     }
   }
 
-  if(statsMode === "month"){
-    let base = new Date();
-    base.setMonth(base.getMonth() + statsOffset);
+if(statsMode === "month"){
+  let base = new Date();
+  base.setMonth(base.getMonth() + statsOffset);
 
-    let y = base.getFullYear();
-    let m = base.getMonth();
-    let days = new Date(y, m+1, 0).getDate();
+  let y = base.getFullYear();
+  let m = base.getMonth();
+  let days = new Date(y, m+1, 0).getDate();
 
-    for(let i=0;i<days;i++){
-      let v = data.sleep?.[y]?.[m]?.[i];
-      if(typeof v === "number"){
-        arr.push(v);
-        labels.push(i+1);
-      }
+  title = `${monthNames[m]} ${y}`;
+
+  for(let i=0;i<days;i++){
+    let v = data.sleep?.[y]?.[m]?.[i];
+    if(typeof v === "number"){
+      arr.push(v);
+      labels.push(i+1);
     }
   }
+}
 
   if(arr.length === 0) return;
 
@@ -379,7 +379,7 @@ missingSleep.textContent = missing > 0 ? missing.toFixed(1) : "0";
           tension:.3
         },
         {
-          data: Array(7).fill(TARGET),
+  data: Array(arr.length).fill(TARGET),
           borderDash:[5,5],
           borderWidth:1
         }
@@ -541,6 +541,11 @@ window.changeStats = (d)=>{
   statsOffset += d;
   renderSleepStats();
 };
+window.setStatsMode = function(mode){
+  statsMode = mode;
+  statsOffset = 0;
+  renderSleepStats();
+};
 
 
   window.editSleep=(y,m,d)=>{
@@ -636,6 +641,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
