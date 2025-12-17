@@ -527,13 +527,12 @@ for(let h in data.habits){
 }
 window.changeWeek = (d) => {
   currentWeekOffset += d;
-  renderWeek();
 
-  // Falls Statistik offen ist → aktualisieren
-  if(statsView.style.display === "block"){
-    renderSleepStats();
+  if(weekView.style.display === "block"){
+    renderWeek();
   }
 };
+
 window.changeStats = (d)=>{
   statsOffset += d;
   renderSleepStats();
@@ -569,13 +568,33 @@ function renderChart(habits,days){
     datasets:[{data:perc,fill:true,tension:.3}]},
     options:{responsive:true,scales:{y:{min:0,max:100}},plugins:{legend:{display:false}}}});
 }
-window.changeStatsPeriod = function(mode){
-  statsMode = mode;
-  statsOffset = 0;
+window.changeStatsPeriod = function(dir){
+  statsOffset += dir;
   renderSleepStats();
 };
 
+
 /* ===== VIEW SWITCH ===== */
+  statsWeekTab.onclick = () => {
+  statsMode = "week";
+  statsOffset = 0;
+
+  statsWeekTab.classList.add("active");
+  statsMonthTab.classList.remove("active");
+
+  renderSleepStats();
+};
+
+statsMonthTab.onclick = () => {
+  statsMode = "month";
+  statsOffset = 0;
+
+  statsMonthTab.classList.add("active");
+  statsWeekTab.classList.remove("active");
+
+  renderSleepStats();
+};
+
 monthTab.onclick=()=>{
   monthTab.classList.add("active");
   weekTab.classList.remove("active");
@@ -595,7 +614,14 @@ monthTab.onclick=()=>{
   weekView.style.display="none";
   statsView.style.display="block";
 
-  renderSleepStats();
+  statsMode = "week";
+statsOffset = 0;
+
+statsWeekTab.classList.add("active");
+statsMonthTab.classList.remove("active");
+
+renderSleepStats();
+
 };
 
 
@@ -614,6 +640,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
