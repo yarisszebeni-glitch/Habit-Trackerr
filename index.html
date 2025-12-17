@@ -589,25 +589,7 @@ window.changeStatsPeriod = function(dir){
 
 
 /* ===== VIEW SWITCH ===== */
-  statsWeekTab.onclick = () => {
-  statsMode = "week";
-  statsOffset = 0;
-
-  statsWeekTab.classList.add("active");
-  statsMonthTab.classList.remove("active");
-
-  renderSleepStats();
-};
-
-statsMonthTab.onclick = () => {
-  statsMode = "month";
-  statsOffset = 0;
-
-  statsMonthTab.classList.add("active");
-  statsWeekTab.classList.remove("active");
-
-  renderSleepStats();
-};
+ 
 
 monthTab.onclick=()=>{
   monthTab.classList.add("active");
@@ -654,6 +636,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
