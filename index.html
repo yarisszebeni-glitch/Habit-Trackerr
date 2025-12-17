@@ -292,7 +292,7 @@ onAuthStateChanged(auth,async user=>{
 });
 
 /* ================= HELPERS ================= */
-  function renderSleepStats(){
+  window.renderSleepStats = function(){
   const TARGET = 8;
 
   let arr = [];
@@ -372,7 +372,12 @@ missingSleep.textContent = missing > 0 ? missing.toFixed(1) : "0";
       scales:{ y:{ min:0, max:12 }},
       plugins:{ legend:{ display:false }}
     }
-  });
+  });window.changeStatsPeriod = function(mode){
+  statsMode = mode;     // "week" oder "month"
+  statsOffset = 0;      // zurücksetzen
+  renderSleepStats();
+};
+
 }
 
 function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
@@ -597,6 +602,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
