@@ -293,14 +293,25 @@ onAuthStateChanged(auth,async user=>{
 
 /* ================= HELPERS ================= */
   window.renderSleepStats = function(){
+    let title = "";
+
   const TARGET = 8;
 
   let arr = [];
   let labels = [];
 
   if(statsMode === "week"){
-    let start = new Date();
-    start.setDate(start.getDate() - start.getDay() + 1 + statsOffset * 7);
+   let base = new Date();
+base.setDate(base.getDate() + statsOffset * 7);
+
+let start = new Date(base);
+start.setDate(start.getDate() - start.getDay() + 1);
+
+let end = new Date(start);
+end.setDate(start.getDate() + 6);
+
+title = `${start.toLocaleDateString()} – ${end.toLocaleDateString()}`;
+
 
     for(let d=0; d<7; d++){
       let date = new Date(start);
@@ -348,6 +359,8 @@ let missing = targetTotal - actualTotal;
 
 missingSleep.textContent = missing > 0 ? missing.toFixed(1) : "0";
 
+  // Titel (Datum / Zeitraum anzeigen)
+  statsTitle.textContent = title;
 
   // Chart
   if(window.sleepChartObj) window.sleepChartObj.destroy();
@@ -601,6 +614,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
