@@ -208,15 +208,19 @@ th{background:#f7f7f7}
   <button onclick="changeStats(1)">→</button>
 </div>
 
-<div class="tabs">
-  <button id="statsWeekTab" class="active">Woche</button>
-  <button id="statsMonthTab">Monat</button>
+<div class="weekNav">
+  <button onclick="changeStats(-1)">←</button>
+
+  <button onclick="setStatsMode('week')">Woche</button>
+  <button onclick="setStatsMode('month')">Monat</button>
+
+  <button onclick="changeStats(1)">→</button>
 </div>
-<div class="weekNav" id="statsNav">
-  <button onclick="changeStatsPeriod(-1)">←</button>
+
+<div style="text-align:center; margin:6px 0; font-weight:bold">
   <span id="statsTitle"></span>
-  <button onclick="changeStatsPeriod(1)">→</button>
 </div>
+
 
   <p><b>Ø Schlaf:</b> <span id="avgSleep">–</span> h</p>
   <p><b>Fehlender Schlaf:</b> <span id="missingSleep">–</span> h</p>
@@ -556,6 +560,16 @@ window.changeStats = (d)=>{
   save();
   renderWeek();
 };
+window.setStatsMode = function(mode){
+  statsMode = mode;
+  statsOffset = 0;
+  renderSleepStats();
+};
+
+window.changeStats = function(dir){
+  statsOffset += dir;
+  renderSleepStats();
+};
 
 
 /* ================= CHART ================= */
@@ -640,6 +654,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
