@@ -194,6 +194,29 @@ th{background:#f7f7f7}
 <!-- ===== STATISTIK ===== -->
 <div id="statsView" style="display:none">
   <h3>😴 Schlaf-Statistik (Woche)</h3>
+  <div class="weekNav">
+  <button onclick="changeStats(-1)">←</button>
+
+  <button onclick="statsMode='week';statsOffset=0;renderSleepStats()">
+    Woche
+  </button>
+
+  <button onclick="statsMode='month';statsOffset=0;renderSleepStats()">
+    Monat
+  </button>
+
+  <button onclick="changeStats(1)">→</button>
+</div>
+
+<div class="tabs">
+  <button id="statsWeekTab" class="active">Woche</button>
+  <button id="statsMonthTab">Monat</button>
+</div>
+<div class="weekNav" id="statsNav">
+  <button onclick="changeStatsPeriod(-1)">←</button>
+  <span id="statsTitle"></span>
+  <button onclick="changeStatsPeriod(1)">→</button>
+</div>
 
   <p><b>Ø Schlaf:</b> <span id="avgSleep">–</span> h</p>
   <p><b>Fehlender Schlaf:</b> <span id="missingSleep">–</span> h</p>
@@ -241,6 +264,10 @@ let currentYear=new Date().getFullYear();
 let currentMonth=new Date().getMonth();
 let chart;
 let currentWeekOffset=0;
+  // ===== Statistik-Status =====
+let statsMode = "week";   // "week" oder "month"
+let statsOffset = 0;
+
 
 const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
 const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
@@ -266,26 +293,50 @@ onAuthStateChanged(auth,async user=>{
 
 /* ================= HELPERS ================= */
   function renderSleepStats(){
-  const TARGET = 8; // dein Optimum
-
-  let start = new Date();
-  start.setDate(start.getDate() - start.getDay() + 1 + currentWeekOffset * 7);
+  const TARGET = 8;
 
   let arr = [];
+  let labels = [];
 
-  for(let d=0; d<7; d++){
-    let date = new Date(start);
-    date.setDate(start.getDate() + d);
+  if(statsMode === "week"){
+    let start = new Date();
+    start.setDate(start.getDate() - start.getDay() + 1 + statsOffset * 7);
 
-    let y = date.getFullYear();
-    let m = date.getMonth();
-    let i = date.getDate() - 1;
+    for(let d=0; d<7; d++){
+      let date = new Date(start);
+      date.setDate(start.getDate() + d);
 
-    let v = data.sleep?.[y]?.[m]?.[i];
-    if(typeof v === "number") arr.push(v);
+      let y = date.getFullYear();
+      let m = date.getMonth();
+      let i = date.getDate() - 1;
+
+      let v = data.sleep?.[y]?.[m]?.[i];
+      if(typeof v === "number"){
+        arr.push(v);
+        labels.push(["Mo","Di","Mi","Do","Fr","Sa","So"][d]);
+      }
+    }
+  }
+
+  if(statsMode === "month"){
+    let base = new Date();
+    base.setMonth(base.getMonth() + statsOffset);
+
+    let y = base.getFullYear();
+    let m = base.getMonth();
+    let days = new Date(y, m+1, 0).getDate();
+
+    for(let i=0;i<days;i++){
+      let v = data.sleep?.[y]?.[m]?.[i];
+      if(typeof v === "number"){
+        arr.push(v);
+        labels.push(i+1);
+      }
+    }
   }
 
   if(arr.length === 0) return;
+
 
   // Ø Schlaf
   let avg = (arr.reduce((a,b)=>a+b,0) / arr.length).toFixed(1);
@@ -303,7 +354,7 @@ missingSleep.textContent = missing > 0 ? missing.toFixed(1) : "0";
   window.sleepChartObj = new Chart(sleepChart,{
     type:"line",
     data:{
-      labels:["Mo","Di","Mi","Do","Fr","Sa","So"],
+      labels: labels,
       datasets:[
         {
           data: arr,
@@ -464,6 +515,11 @@ for(let h in data.habits){
 window.changeWeek = (d) => {
   currentWeekOffset += d;
   renderWeek();
+  window.changeStats = (d)=>{
+  statsOffset += d;
+  renderSleepStats();
+};
+
 
   // Falls Statistik offen ist → aktualisieren
   if(statsView.style.display === "block"){
@@ -541,6 +597,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
