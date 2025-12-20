@@ -527,9 +527,8 @@ for(let h in data.habits){
   🌙 ${sleepVal?.night !== undefined ? hoursToTime(sleepVal.night) : "–"}
   <br>
   ☀️ ${sleepVal?.nap ? hoursToTime(sleepVal.nap) : "0:00"}
-  <br>
-  <b>Σ ${sleepVal ? hoursToTime((sleepVal.night||0)+(sleepVal.nap||0)) : "–"}</b>
 </div>
+
 
 
 `;
@@ -563,7 +562,7 @@ window.setStatsMode = function(mode){
 
 
 window.editSleep = (y,m,d)=>{
-  let nightStr = prompt("Nachtschlaf eingeben (hh:mm), z. B. 6:30");
+  let nightStr = prompt("Nachtschlaf (hh:mm), z. B. 7:30");
   if(nightStr === null) return;
 
   let night = timeToHours(nightStr);
@@ -572,7 +571,7 @@ window.editSleep = (y,m,d)=>{
     return;
   }
 
-  let napStr = prompt("Mittagsschlaf eingeben (hh:mm) oder leer lassen", "0:00");
+  let napStr = prompt("Mittagsschlaf (hh:mm) – optional", "0:00");
   if(napStr === null) return;
 
   let nap = timeToHours(napStr);
@@ -583,14 +582,12 @@ window.editSleep = (y,m,d)=>{
 
   data.sleep[y] ??= {};
   data.sleep[y][m] ??= {};
-  data.sleep[y][m][d] = {
-    night,
-    nap
-  };
+  data.sleep[y][m][d] = { night, nap };
 
   save();
   renderWeek();
 };
+
 
   
 window.setStatsMode = function(mode){
@@ -668,6 +665,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
