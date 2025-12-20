@@ -206,9 +206,11 @@ th{background:#f7f7f7}
 </div>
 
 
+<p><b>Ø Nachtschlaf:</b> <span id="avgNight">–</span></p>
+<p><b>Ø Mittagsschlaf:</b> <span id="avgNap">–</span></p>
+<p><b>Fehlender Schlaf (nur Nachtschlaf):</b> <span id="missingNight">–</span></p>
+<p><b>Fehlender Schlaf (inkl. Mittagsschlaf):</b> <span id="missingTotal">–</span></p>
 
-  <p><b>Ø Schlaf:</b> <span id="avgSleep">–</span> h</p>
-  <p><b>Fehlender Schlaf:</b> <span id="missingSleep">–</span> h</p>
 
   <canvas id="sleepChart" style="margin-top:20px"></canvas>
 </div>
@@ -295,9 +297,12 @@ onAuthStateChanged(auth,async user=>{
 });
 
 /* ================= HELPERS ================= */
-  window.renderSleepStats = function(){
-    let title = "";
+ window.renderSleepStats = function(){
 
+  let nightArr = [];
+  let napArr = [];
+
+  let title = "";
   const TARGET = 8;
 
   let arr = [];
@@ -325,9 +330,15 @@ title = `${start.toLocaleDateString()} – ${end.toLocaleDateString()}`;
       let i = date.getDate() - 1;
 
       let s = data.sleep?.[y]?.[m]?.[i];
-if(s && typeof s === "object" && typeof s.night === "number"){
-  arr.push(s.night);
-  labels.push(["Mo","Di","Mi","Do","Fr","Sa","So"][d]);
+if(s && typeof s === "object"){
+  if(typeof s.night === "number"){
+    nightArr.push(s.night);
+    arr.push(s.night); // 👈 Graph = NUR Nachtschlaf
+    labels.push(["Mo","Di","Mi","Do","Fr","Sa","So"][d]);
+  }
+  if(typeof s.nap === "number"){
+    napArr.push(s.nap);
+  }
 }
 
     }
@@ -344,13 +355,19 @@ if(statsMode === "month"){
   title = `${monthNames[m]} ${y}`;
 
   for(let i=0;i<days;i++){
-   let s = data.sleep?.[y]?.[m]?.[i];
+let s = data.sleep?.[y]?.[m]?.[i];
 if(s && typeof s === "object"){
-  let total = (s.night || 0) + (s.nap || 0);
-  arr.push(total);
+  if(typeof s.night === "number"){
+    nightArr.push(s.night);
+    arr.push(s.night); // 👈 Graph bleibt Nachtschlaf
+    labels.push(i+1);
+  }
+  if(typeof s.nap === "number"){
+    napArr.push(s.nap);
+  }
+}
 
-      labels.push(i+1);
-    }
+
   }
 }
 
@@ -362,12 +379,19 @@ if(s && typeof s === "object"){
   avgSleep.textContent = hoursToTime(parseFloat(avg));
 
 
-  let targetTotal = arr.length * TARGET;
-let actualTotal = arr.reduce((a,b)=>a+b,0);
-let missing = targetTotal - actualTotal;
+let nightTotal = nightArr.reduce((a,b)=>a+b,0);
+let napTotal   = napArr.reduce((a,b)=>a+b,0);
 
-missingSleep.textContent =
-  missing > 0 ? hoursToTime(missing) : "0:00";
+let targetTotal = nightArr.length * TARGET;
+
+let missingWithoutNap = targetTotal - nightTotal;
+let missingWithNap = targetTotal - (nightTotal + napTotal);
+
+missingSleep.innerHTML = `
+  Ohne Mittagsschlaf: <b>${missingWithoutNap > 0 ? hoursToTime(missingWithoutNap) : "0:00"}</b><br>
+  Mit Mittagsschlaf: <b>${missingWithNap > 0 ? hoursToTime(missingWithNap) : "0:00"}</b>
+`;
+
 
 
   // Titel (Datum / Zeitraum anzeigen)
@@ -663,6 +687,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
