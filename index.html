@@ -324,11 +324,12 @@ title = `${start.toLocaleDateString()} – ${end.toLocaleDateString()}`;
       let m = date.getMonth();
       let i = date.getDate() - 1;
 
-      let v = data.sleep?.[y]?.[m]?.[i];
-      if(typeof v === "number"){
-        arr.push(v);
-        labels.push(["Mo","Di","Mi","Do","Fr","Sa","So"][d]);
-      }
+      let s = data.sleep?.[y]?.[m]?.[i];
+if(s && typeof s === "object" && typeof s.night === "number"){
+  arr.push(s.night);
+  labels.push(["Mo","Di","Mi","Do","Fr","Sa","So"][d]);
+}
+
     }
   }
 
@@ -589,7 +590,6 @@ window.editSleep = (y,m,d)=>{
 };
 
 
-  
 window.setStatsMode = function(mode){
   statsMode = mode;
   statsOffset = 0;
@@ -602,6 +602,7 @@ window.changeStats = function(dir){
 };
 
 
+
 /* ================= CHART ================= */
 function renderChart(habits,days){
   let done=Array(days).fill(0),tot=Array(days).fill(0);
@@ -612,10 +613,7 @@ function renderChart(habits,days){
     datasets:[{data:perc,fill:true,tension:.3}]},
     options:{responsive:true,scales:{y:{min:0,max:100}},plugins:{legend:{display:false}}}});
 }
-window.changeStatsPeriod = function(dir){
-  statsOffset += dir;
-  renderSleepStats();
-};
+
 
 
 /* ===== VIEW SWITCH ===== */
@@ -665,6 +663,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
