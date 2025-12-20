@@ -207,7 +207,7 @@ th{background:#f7f7f7}
 
 
 <p><b>Ø Nachtschlaf:</b> <span id="avgNight">–</span></p>
-<p><b>Ø Mittagsschlaf:</b> <span id="avgNap">–</span></p>
+<p><b>☀️ Mittagsschlaf gesamt:</b> <span id="napTotal">–</span></p>
 <p><b>Fehlender Schlaf (nur Nachtschlaf):</b> <span id="missingNight">–</span></p>
 <p><b>Fehlender Schlaf (inkl. Mittagsschlaf):</b> <span id="missingTotal">–</span></p>
 
@@ -260,7 +260,7 @@ let currentWeekOffset=0;
 let statsMode = "week";   // "week" oder "month"
 let statsOffset = 0;
 const avgNight = document.getElementById("avgNight");
-const avgNap = document.getElementById("avgNap");
+const napTotal = document.getElementById("napTotal");
 const missingNight = document.getElementById("missingNight");
 const missingTotal = document.getElementById("missingTotal");
 const sleepChart = document.getElementById("sleepChart");
@@ -389,6 +389,8 @@ if(s && typeof s === "object"){
 
 let nightTotal = nightArr.reduce((a,b)=>a+b,0);
 let napTotal   = napArr.reduce((a,b)=>a+b,0);
+// ☀️ Mittagsschlaf gesamt anzeigen (KEIN Durchschnitt)
+napTotal.textContent = napTotal > 0 ? hoursToTime(napTotal) : "0:00";
 
 let targetTotal = nightArr.length * TARGET;
 
@@ -693,6 +695,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
