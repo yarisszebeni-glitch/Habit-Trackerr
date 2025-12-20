@@ -193,31 +193,18 @@ th{background:#f7f7f7}
 </div>
 <!-- ===== STATISTIK ===== -->
 <div id="statsView" style="display:none">
-  <h3>😴 Schlaf-Statistik (Woche)</h3>
-  <div class="weekNav">
-  <button onclick="changeStats(-1)">←</button>
-
-  <button onclick="setStatsMode('week')">Woche</button>
-  <span id="statsTitle"></span>
-  <button onclick="setStatsMode('month')">Monat</button>
-
-  <button onclick="changeStats(1)">→</button>
-</div>
-
-  
-
 <div class="weekNav">
   <button onclick="changeStats(-1)">←</button>
 
   <button onclick="setStatsMode('week')">Woche</button>
+
+  <span id="statsTitle"></span>
+
   <button onclick="setStatsMode('month')">Monat</button>
 
   <button onclick="changeStats(1)">→</button>
 </div>
 
-<div style="text-align:center; margin:6px 0; font-weight:bold">
-  <span id="statsTitle"></span>
-</div>
 
 
   <p><b>Ø Schlaf:</b> <span id="avgSleep">–</span> h</p>
@@ -567,7 +554,7 @@ window.setStatsMode = function(mode){
 };
 
 
-  window.editSleep=(y,m,d)=>{
+window.editSleep = (y,m,d) => {
   let val = prompt("Schlafdauer eingeben (hh:mm), z. B. 6:30");
   if(val === null) return;
 
@@ -584,22 +571,7 @@ window.setStatsMode = function(mode){
   save();
   renderWeek();
 };
-
-  if(val===null) return;
-
-  let num=parseFloat(val);
-  if(isNaN(num)||num<0||num>24){
-    alert("Ungültige Eingabe");
-    return;
-  }
-
-  data.sleep[y] ??= {};
-  data.sleep[y][m] ??= {};
-  data.sleep[y][m][d]=num;
-
-  save();
-  renderWeek();
-};
+  
 window.setStatsMode = function(mode){
   statsMode = mode;
   statsOffset = 0;
@@ -653,8 +625,7 @@ monthTab.onclick=()=>{
   statsMode = "week";
 statsOffset = 0;
 
-statsWeekTab.classList.add("active");
-statsMonthTab.classList.remove("active");
+
 
 renderSleepStats();
 
@@ -676,6 +647,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
