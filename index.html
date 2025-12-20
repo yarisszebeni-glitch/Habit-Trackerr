@@ -273,7 +273,7 @@ let statsOffset = 0;
 
 const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
 const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-  function timeToHours(str){
+function timeToHours(str){
   if(!str.includes(":")) return null;
   let [h,m] = str.split(":").map(Number);
   if(isNaN(h) || isNaN(m) || m < 0 || m >= 60) return null;
@@ -285,7 +285,7 @@ function hoursToTime(num){
   let m = Math.round((num - h) * 60);
   return `${h}:${m.toString().padStart(2,"0")}`;
 }
-
+ 
 
 /* ================= AUTH ================= */
 onAuthStateChanged(auth,async user=>{
@@ -676,6 +676,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
