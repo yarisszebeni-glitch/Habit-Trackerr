@@ -259,6 +259,13 @@ let currentWeekOffset=0;
   // ===== Statistik-Status =====
 let statsMode = "week";   // "week" oder "month"
 let statsOffset = 0;
+const avgNight = document.getElementById("avgNight");
+const avgNap = document.getElementById("avgNap");
+const missingNight = document.getElementById("missingNight");
+const missingTotal = document.getElementById("missingTotal");
+const sleepChart = document.getElementById("sleepChart");
+const statsTitle = document.getElementById("statsTitle");
+  
 
 
 const weekDays=['Mo','Di','Mi','Do','Fr','Sa','So'];
@@ -376,7 +383,8 @@ if(s && typeof s === "object"){
 
   // Ø Schlaf
   let avg = (arr.reduce((a,b)=>a+b,0) / arr.length).toFixed(1);
-  avgSleep.textContent = hoursToTime(parseFloat(avg));
+  avgNight.textContent = hoursToTime(parseFloat(avg));
+
 
 
 let nightTotal = nightArr.reduce((a,b)=>a+b,0);
@@ -387,10 +395,12 @@ let targetTotal = nightArr.length * TARGET;
 let missingWithoutNap = targetTotal - nightTotal;
 let missingWithNap = targetTotal - (nightTotal + napTotal);
 
-missingSleep.innerHTML = `
-  Ohne Mittagsschlaf: <b>${missingWithoutNap > 0 ? hoursToTime(missingWithoutNap) : "0:00"}</b><br>
-  Mit Mittagsschlaf: <b>${missingWithNap > 0 ? hoursToTime(missingWithNap) : "0:00"}</b>
-`;
+missingNight.textContent =
+  missingWithoutNap > 0 ? hoursToTime(missingWithoutNap) : "0:00";
+
+missingTotal.textContent =
+  missingWithNap > 0 ? hoursToTime(missingWithNap) : "0:00";
+
 
 
 
@@ -579,11 +589,7 @@ window.changeStats = (d)=>{
   statsOffset += d;
   renderSleepStats();
 };
-window.setStatsMode = function(mode){
-  statsMode = mode;
-  statsOffset = 0;
-  renderSleepStats();
-};
+
 
 
 window.editSleep = (y,m,d)=>{
@@ -687,6 +693,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
