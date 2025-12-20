@@ -388,14 +388,15 @@ if(s && typeof s === "object"){
 
 
 let nightTotal = nightArr.reduce((a,b)=>a+b,0);
-let napTotal   = napArr.reduce((a,b)=>a+b,0);
+let napSum = napArr.reduce((a,b)=>a+b,0);
 // ☀️ Mittagsschlaf gesamt anzeigen (KEIN Durchschnitt)
-napTotal.textContent = napTotal > 0 ? hoursToTime(napTotal) : "0:00";
+napTotal.textContent = napSum > 0 ? hoursToTime(napSum) : "0:00";
+
 
 let targetTotal = nightArr.length * TARGET;
 
 let missingWithoutNap = targetTotal - nightTotal;
-let missingWithNap = targetTotal - (nightTotal + napTotal);
+let missingWithNap = targetTotal - (nightTotal + napSum);
 
 missingNight.textContent =
   missingWithoutNap > 0 ? hoursToTime(missingWithoutNap) : "0:00";
@@ -695,6 +696,7 @@ weekTab.onclick=()=>{
 </script>
 </body>
 </html> 
+
 
 
 
